@@ -1,5 +1,5 @@
 // 모든 경로를 다 적어주어야 Vanilla 에서는 오류가 발생하지 않음
-import * as THREE from "../node_modules/three/build/three.module.js";
+import * as THREE from "/scripts/three/build/three.module.js";
 
 /*
 const body = document.querySelector("body");

@@ -7,7 +7,8 @@
 ## 2. NPM Dependencies
 
 - npm init -y
-- npm install express nodemon three
+- npm install express three
+- npm install nodemon --save-dev
 
 ## 3. Dockerfile
 
@@ -18,11 +19,14 @@ WORKDIR /app
 
 COPY package.json package-lock.json ./
 
-RUN npm ci
+# RUN npm ci
+RUN npm install
 
-COPY . ./
+COPY . .
 
-ENTRYPOINT ["npm", "start"]
+EXPOSE 8000
+
+CMD ["npm", "run", "start"];
 ```
 
 ## 4. Build Image
@@ -31,3 +35,11 @@ ENTRYPOINT ["npm", "start"]
 - docker push `NEW_IMAGE_NAME:TAG`
 - docker build -f Dockerfile -t `IMAGE_NAME:TAG` .
 - docker run -d -p 8000:8000 --name `CONTAINER_NAME` -v ${PWD}:/app `IMAGE_NAME:TAG`
+
+---
+
+##### ⚠ This project DOES NOT support LiveServer on VSC.
+
+##### Highly recommend using npm command line (e.g. "npm start")
+
+---

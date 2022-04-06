@@ -4,8 +4,11 @@ WORKDIR /app
 
 COPY package.json package-lock.json ./
 
-RUN npm ci
+# RUN npm ci
+RUN npm install
 
-COPY . ./
+COPY . .
 
-ENTRYPOINT ["npm", "start"]
+EXPOSE 8000
+
+CMD ["npm", "run", "start"];
