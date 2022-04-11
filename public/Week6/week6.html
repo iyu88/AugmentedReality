@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "/scripts/three/build/three.module.js"
+        }
+      }
+    </script>
+    <script
+      type="module"
+      src="/scripts/@mediapipe/camera_utils/camera_utils.js"
+      defer
+    ></script>
+    <script
+      type="module"
+      src="/scripts/@mediapipe/control_utils/control_utils.js"
+      defer
+    ></script>
+    <script
+      type="module"
+      src="/scripts/@mediapipe/drawing_utils/drawing_utils.js"
+      defer
+    ></script>
+    <script
+      type="module"
+      src="/scripts/@mediapipe/face_mesh/face_mesh.js"
+      defer
+    ></script>
+    <script type="module" src="../Week6/week6.js" defer></script>
+    <title>Week6</title>
+  </head>
+  <body>
+    <h1>My Week6</h1>
+    <div class="container">
+      <video class="input_video"></video>
+      <canvas class="output_canvas" width="1280px" height="720px"></canvas>
+    </div>
+  </body>
+</html>
