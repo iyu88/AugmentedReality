@@ -25,6 +25,15 @@ camera.up.set(0, 1, 0);
 
 const scene = new THREE.Scene();
 
+const texture = new THREE.VideoTexture(videoElement);
+const geometry = new THREE.PlaneGeometry(4, 3);
+// geometry.scale(1, 1, 1);
+const material = new THREE.MeshBasicMaterial({ map: texture });
+const mesh = new THREE.Mesh(geometry, material);
+mesh.position.set(0, 0, 96); // wrong
+mesh.lookAt(camera.position);
+scene.add(mesh);
+
 /*
 const points = [];
 points.push(new THREE.Vector3(-10, 0, 0));
