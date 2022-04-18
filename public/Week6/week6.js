@@ -1,6 +1,8 @@
 import * as THREE from "/scripts/three/build/three.module.js";
 import { OrbitControls } from "/scripts/three/examples/jsm/controls/OrbitControls.js";
 
+let points_mesh;
+
 const videoElement = document.getElementsByClassName("input_video")[0];
 const canvasElement = document.getElementsByClassName("output_canvas")[0];
 const canvasCtx = canvasElement.getContext("2d");
@@ -93,6 +95,7 @@ function onResults(results) {
   );
   if (results.multiFaceLandmarks) {
     for (const landmarks of results.multiFaceLandmarks) {
+      // console.log(FACEMESH_RIGHT_IRIS); // landmarks 배열의 index 를 반환
       // 가상의 projection matrix 를 통해서 카메라의 intrinsic parameter 를 몰라도 camera space 에 좌표를 저장
       // 정규화하여 -1 ~ 1 사이의 값으로 변환됨 & 원점을 중심으로 하여 정규화된 점들을 반환
       // camera space 로 unproject 하면 near plane 주변에 잡히게 됨
@@ -124,6 +127,69 @@ function onResults(results) {
         color: "#E0E0E0",
       });
       drawConnectors(canvasCtx, landmarks, FACEMESH_LIPS, { color: "#E0E0E0" });
+
+      // variables
+      let index,
+        points_geo,
+        points_len,
+        points_vertices,
+        points_ns,
+        points_ps,
+        points_ws,
+        points_mat;
+      // landmarks, FACEMESH_FACE_OVAL
+      if (!points_mesh) {
+        points_geo = new THREE.BufferGeometry();
+        points_len = FACEMESH_FACE_OVAL.length;
+        points_vertices = [];
+        for (let i = 0; i < points_len; i++) {
+          index = FACEMESH_FACE_OVAL[i][0]; // 시작점
+          points_ns = landmarks[index]; // facemesh(정규화된 좌표) 에서의 x,y,z 좌표
+          // 정규화된 좌표 (0~1) 를 projection space (-1~1) 로 옮김 + 미디어파이프의 y 축 방향과 ps 의 그것이 다르기 때문에 좌표계를 맞춰줌
+          points_ps = new THREE.Vector3(
+            (points_ns.x - 0.5) * 2,
+            -(points_ns.y - 0.5) * 2,
+            points_ns.z
+          );
+          points_ws = new THREE.Vector3(
+            points_ps.x,
+            points_ps.y,
+            points_ps.z
+          ).unproject(camera); // facemesh 에서 정규화된 좌표를 world space 로 점을 매핑
+          // near plane 에 매우 밀착하여 보여줌
+          points_vertices.push(points_ws.x, points_ws.y, points_ws.z);
+        }
+        points_geo.setAttribute(
+          "position",
+          new THREE.Float32BufferAttribute(points_vertices, 3)
+        );
+        points_mat = new THREE.PointsMaterial({
+          color: 0xff0000,
+          size: 0.07,
+        });
+        points_mesh = new THREE.Points(points_geo, points_mat);
+        scene.add(points_mesh);
+      }
+      let geo_copy = points_mesh.geometry.attributes.position.array;
+      for (let i = 0; i < Math.floor(geo_copy.length / 3); i++) {
+        index = FACEMESH_FACE_OVAL[i][0];
+        points_ns = landmarks[index];
+        points_ps = new THREE.Vector3(
+          (points_ns.x - 0.5) * 2,
+          -(points_ns.y - 0.5) * 2,
+          points_ns.z
+        );
+        points_ws = new THREE.Vector3(
+          points_ps.x,
+          points_ps.y,
+          points_ps.z
+        ).unproject(camera);
+        geo_copy[i * 3] = points_ws.x;
+        geo_copy[i * 3 + 1] = points_ws.y;
+        geo_copy[i * 3 + 2] = points_ws.z;
+      }
+      // GPU 에게 렌더링 업데이트 호출
+      points_mesh.geometry.attributes.position.needsUpdate = true;
     }
   }
   canvasCtx.restore();
