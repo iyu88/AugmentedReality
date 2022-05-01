@@ -18,6 +18,10 @@ app.get("/hw1", (req, res) => {
   res.sendFile(path.join(__dirname + "/public/HW/HW1/hw1.html"));
 });
 
+app.get("/hw2", (req, res) => {
+  res.sendFile(path.join(__dirname + "/public/HW/HW2/hw2.html"));
+});
+
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname + "/public/index.html"));
 });

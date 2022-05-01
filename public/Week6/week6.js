@@ -1,7 +1,12 @@
 import * as THREE from "/scripts/three/build/three.module.js";
 import { OrbitControls } from "/scripts/three/examples/jsm/controls/OrbitControls.js";
+import { Line2 } from "/scripts/three/examples/jsm/lines/Line2.js";
+import { LineMaterial } from "/scripts/three/examples/jsm/lines/LineMaterial.js";
+import { LineGeometry } from "/scripts/three/examples/jsm/lines/LineGeometry.js";
 
 let points_mesh;
+let line_mesh;
+let face_mesh;
 
 const videoElement = document.getElementsByClassName("input_video")[0];
 const canvasElement = document.getElementsByClassName("output_canvas")[0];
@@ -136,9 +141,14 @@ function onResults(results) {
         points_ns,
         points_ps,
         points_ws,
-        points_mat;
+        points_mat,
+        line_geo,
+        line_mat,
+        face_geo,
+        face_mat;
       // landmarks, FACEMESH_FACE_OVAL
       if (!points_mesh) {
+        /* THREE.BufferGeometry */
         points_geo = new THREE.BufferGeometry();
         points_len = FACEMESH_FACE_OVAL.length;
         points_vertices = [];
@@ -163,15 +173,47 @@ function onResults(results) {
           "position",
           new THREE.Float32BufferAttribute(points_vertices, 3)
         );
+
+        line_geo = new THREE.BufferGeometry();
+        line_geo.setAttribute(
+          "position",
+          new THREE.Float32BufferAttribute(points_vertices * 3, 3)
+        );
+
+        face_geo = new THREE.BufferGeometry();
+        face_geo.setAttribute(
+          "position",
+          new THREE.Float32BufferAttribute(points_vertices * 3, 3)
+        );
+        face_geo.setAttribute(
+          "normal",
+          new THREE.Float32BufferAttribute(points_vertices * 3, 3)
+        );
+        face_geo.setAttribute(
+          "uv",
+          new THREE.Float32BufferAttribute(points_vertices * 2, 2)
+        );
+        face_mat = new THREE.MeshBasicMaterial({ color: "yellow" });
+
+        line_mat = new THREE.LineBasicMaterial({
+          color: 0xff0000,
+        });
+        /* THREE.PointsMaterial */
         points_mat = new THREE.PointsMaterial({
           color: 0xff0000,
           size: 0.07,
         });
+        /* THREE.Points */
         points_mesh = new THREE.Points(points_geo, points_mat);
+        line_mesh = new THREE.Line(line_geo, line_mat);
+        face_mesh = new THREE.Mesh(face_geo, face_mat);
+        // face_mesh.geometry.setIndex(TRIANGULATION);
         scene.add(points_mesh);
+        scene.add(line_mesh);
+        scene.add(face_mesh);
       }
       let geo_copy = points_mesh.geometry.attributes.position.array;
-      for (let i = 0; i < Math.floor(geo_copy.length / 3); i++) {
+      for (let i = 0; i < points_len; i++) {
         index = FACEMESH_FACE_OVAL[i][0];
         points_ns = landmarks[index];
         points_ps = new THREE.Vector3(
@@ -190,6 +232,27 @@ function onResults(results) {
       }
       // GPU 에게 렌더링 업데이트 호출
       points_mesh.geometry.attributes.position.needsUpdate = true;
+      line_mesh.geometry.attributes.position.array = geo_copy;
+      line_mesh.geometry.attributes.position.needsUpdate = true;
+
+      const num_len = landmarks.length;
+      for (let i = 0; i < num_len; i++) {
+        points_ns = landmarks[i];
+        points_ps = new THREE.Vector3(
+          (points_ns.x - 0.5) * 2,
+          -(points_ns.y - 0.5) * 2,
+          points_ns.z
+        );
+        points_ws = new THREE.Vector3(
+          points_ps.x,
+          points_ps.y,
+          points_ps.z
+        ).unproject(camera);
+        face_mesh.geometry.attributes.position.array[i * 3] = points_ws.x;
+        face_mesh.geometry.attributes.position.array[i * 3 + 1] = points_ws.y;
+        face_mesh.geometry.attributes.position.array[i * 3 + 2] = points_ws.z;
+      }
+      face_mesh.geometry.attributes.position.needsUpdate = true;
     }
   }
   canvasCtx.restore();
