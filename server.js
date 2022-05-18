@@ -14,6 +14,10 @@ app.get("/week6", (req, res) => {
   res.sendFile(path.join(__dirname + "/public/Week6/week6.html"));
 });
 
+app.get("/week10", (req, res) => {
+  res.sendFile(path.join(__dirname + "/public/Week10/week10.html"));
+});
+
 app.get("/hw1", (req, res) => {
   res.sendFile(path.join(__dirname + "/public/HW/HW1/hw1.html"));
 });
