@@ -1,5 +1,6 @@
 import * as THREE from "./node_modules/three/build/three.module.js";
 import { OrbitControls } from "./node_modules/three/examples/jsm/controls/OrbitControls.js";
+import { OBB } from "./node_modules/three/examples/jsm/math/OBB.js";
 
 class Piano {
   constructor() {
@@ -15,10 +16,15 @@ class Piano {
         this.keySizeY,
         this.keySizeZ
       );
+      piano_geometry.computeBoundingBox();
       const piano_material = new THREE.MeshBasicMaterial({ color: 0xffffff });
       let piano_mesh = new THREE.Mesh(piano_geometry, piano_material);
       piano_mesh.position.x = this.pianoPosition.x + i * 11;
       piano_mesh.position.z = this.pianoPosition.z;
+      piano_mesh.geometry.userData.obb = new OBB().fromBox3(
+        piano_mesh.geometry.boundingBox
+      );
+      piano_mesh.userData.obb = new OBB();
       this.keyGroup.add(piano_mesh);
     }
   }
@@ -26,8 +32,22 @@ class Piano {
     return this.keyGroup;
   }
   detectCollision() {
-    for (const key in this.keyGroup.children) {
-      console.log(key.position);
+    console.log("DCDCDCDC");
+    for (const key of this.keyGroup.children) {
+      key.userData.obb.copy(key.geometry.userData.obb);
+      key.userData.obb.applyMatrix4(key.matrixWorld);
+      for (let i = 0; i < cubeArray.length; i++) {
+        if (cubeArray[i]) {
+          cubeArray[i].userData.obb.copy(cubeArray[i].geometry.userData.obb);
+          cubeArray[i].userData.obb.applyMatrix4(cubeArray[i].matrixWorld);
+          if (cubeArray[i].userData.obb.intersectsOBB(key.userData.obb)) {
+            console.log("CCCCCCCC");
+            cubeArray[i].material.color.set(0xff0000);
+          } else {
+            cubeArray[i].material.color.set(0x0000ff);
+          }
+        }
+      }
     }
   }
 }
@@ -118,6 +138,8 @@ FarPlane_geometry.setAttribute(
 scene.add(FarPlane_mesh);
 
 let lefthand_point_mesh = null;
+let cubeArray = [];
+let flag = true;
 
 let testPiano = new Piano();
 scene.add(testPiano.keyGroup);
@@ -134,10 +156,10 @@ function onResults(results) {
     console.log("왼손 발견");
     //console.log(testPiano.keyGroup.children[0].position);
     //let num_lefthand_point = 21;
-    if (lefthand_point_mesh == null) {
+    if (flag) {
       //console.log(HAND_CONNECTIONS);
-      console.log(testPiano.detectCollision());
-      let lefthand_point_geo = new THREE.BufferGeometry();
+      // console.log(testPiano.detectCollision());
+      // let lefthand_point_geo = new THREE.BufferGeometry();
       const lefthand_vertices = [];
       for (const landmarks of results.leftHandLandmarks) {
         // left hand landmarks 21개
@@ -152,17 +174,67 @@ function onResults(results) {
         );
         lefthand_vertices.push(pos_ws.x, pos_ws.y, pos_ws.z);
       }
-      const point_mat = new THREE.PointsMaterial({ color: 0xff0000, size: 7 });
-      lefthand_point_geo.setAttribute(
-        "position",
-        new THREE.Float32BufferAttribute(lefthand_vertices, 3)
-      );
-      lefthand_point_mesh = new THREE.Points(lefthand_point_geo, point_mat);
-      scene.add(lefthand_point_mesh);
+      let verticesLen = Math.floor(lefthand_vertices.length / 3);
+      for (let i = 0; i < verticesLen; i++) {
+        if (i % 4) {
+          const geometry = new THREE.BoxGeometry(1, 1, 1);
+          geometry.computeBoundingBox();
+          const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+          const cube = new THREE.Mesh(geometry, material);
+          cube.position.set(
+            lefthand_vertices[3 * i + 0],
+            lefthand_vertices[3 * i + 1],
+            lefthand_vertices[3 * i + 2]
+          );
+          cube.geometry.userData.obb = new OBB().fromBox3(
+            cube.geometry.boundingBox
+          );
+          cube.userData.obb = new OBB();
+          scene.add(cube);
+          cubeArray.push(cube);
+        } else {
+          cubeArray.push(null);
+        }
+      }
+      flag = false;
+      // const point_mat = new THREE.PointsMaterial({ color: 0xff0000, size: 7 });
+      // lefthand_point_geo.setAttribute(
+      //   "position",
+      //   new THREE.Float32BufferAttribute(lefthand_vertices, 3)
+      // );
+      // let len = Math.floor(
+      //   lefthand_point_geo.attributes.position.array.length / 3
+      // );
+      // for (let i = 0; i < len; i++) {
+      //   if (i % 4) {
+      //     lefthand_point_geo.attributes.position.array[3 * i + 0] = 0;
+      //     lefthand_point_geo.attributes.position.array[3 * i + 1] = 0;
+      //     lefthand_point_geo.attributes.position.array[3 * i + 2] = 0;
+      //   }
+      // }
+      // lefthand_point_mesh = new THREE.Points(lefthand_point_geo, point_mat);
+      // scene.add(lefthand_point_mesh);
     }
+    for (const [index, landmarks] of results.leftHandLandmarks.entries()) {
+      if (cubeArray[index]) {
+        const pos_ns = landmarks;
+        const pos_ps = new THREE.Vector3(
+          (pos_ns.x - 0.5) * 2,
+          -(pos_ns.y - 0.5) * 2,
+          pos_ns.z
+        );
+        let pos_ws = new THREE.Vector3(pos_ps.x, pos_ps.y, pos_ps.z).unproject(
+          camera1
+        );
+
+        cubeArray[index].position.set(pos_ws.x, pos_ws.y, pos_ws.z);
+      }
+    }
+    testPiano.detectCollision();
+    /*
     let positions = lefthand_point_mesh.geometry.attributes.position.array;
     let i = 0;
-    for (const landmarks of results.leftHandLandmarks) {
+    for (const [index, landmarks] of results.leftHandLandmarks.entries()) {
       const pos_ns = landmarks;
       const pos_ps = new THREE.Vector3(
         (pos_ns.x - 0.5) * 2,
@@ -172,16 +244,22 @@ function onResults(results) {
       let pos_ws = new THREE.Vector3(pos_ps.x, pos_ps.y, pos_ps.z).unproject(
         camera1
       );
-
-      positions[3 * i + 0] = pos_ws.x;
-      positions[3 * i + 1] = pos_ws.y;
-      positions[3 * i + 2] = pos_ws.z;
+      if (!(index % 4)) {
+        positions[3 * i + 0] = pos_ws.x;
+        positions[3 * i + 1] = pos_ws.y;
+        positions[3 * i + 2] = pos_ws.z;
+      } else {
+        positions[3 * i + 0] = 0;
+        positions[3 * i + 1] = 0;
+        positions[3 * i + 2] = 0;
+      }
       i += 1;
     }
     lefthand_point_mesh.geometry.computeBoundingBox();
     lefthand_point_mesh.geometry.boundingBox.needsUpdate = true;
     //console.log(lefthand_point_mesh.geometry.boundingBox);
     lefthand_point_mesh.geometry.attributes.position.needsUpdate = true;
+    */
   }
   controls_world.update();
   FarPlane_mesh.material.map = texture_frame;
@@ -196,6 +274,7 @@ const holistic = new Holistic({
   },
 });
 holistic.setOptions({
+  selfieMode: true,
   modelComplexity: 1,
   smoothLandmarks: true,
   enableSegmentation: true,
