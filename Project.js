@@ -2,14 +2,20 @@ import * as THREE from "./node_modules/three/build/three.module.js";
 import { OrbitControls } from "./node_modules/three/examples/jsm/controls/OrbitControls.js";
 import { OBB } from "./node_modules/three/examples/jsm/math/OBB.js";
 
+const playSound = (index) => {
+  let audio = new Audio(`./sounds/${index}.mp3`);
+  audio.loop = false;
+  audio.play();
+};
+
 class Piano {
   constructor() {
     this.keyGroup = new THREE.Group();
-    this.pianoPosition = new THREE.Vector3(0, 0, 30);
+    this.pianoPosition = new THREE.Vector3(0, 0, 23);
     this.keySizeX = 10;
-    this.keySizeY = 20;
+    this.keySizeY = 40;
     this.keySizeZ = 5;
-    this.keyNumber = 5;
+    this.keyNumber = 3;
     for (let i = 0; i < this.keyNumber; i++) {
       const piano_geometry = new THREE.BoxGeometry(
         this.keySizeX,
@@ -32,19 +38,20 @@ class Piano {
     return this.keyGroup;
   }
   detectCollision() {
-    console.log("DCDCDCDC");
-    for (const key of this.keyGroup.children) {
+    // console.log("DCDCDCDC");
+    for (const [index, key] of this.keyGroup.children.entries()) {
       key.userData.obb.copy(key.geometry.userData.obb);
       key.userData.obb.applyMatrix4(key.matrixWorld);
       for (let i = 0; i < cubeArray.length; i++) {
         if (cubeArray[i]) {
           cubeArray[i].userData.obb.copy(cubeArray[i].geometry.userData.obb);
           cubeArray[i].userData.obb.applyMatrix4(cubeArray[i].matrixWorld);
-          if (cubeArray[i].userData.obb.intersectsOBB(key.userData.obb)) {
+          if (key.userData.obb.intersectsOBB(cubeArray[i].userData.obb)) {
             console.log("CCCCCCCC");
-            cubeArray[i].material.color.set(0xff0000);
+            key.material.color.set(0xff0000);
+            playSound(index);
           } else {
-            cubeArray[i].material.color.set(0x0000ff);
+            key.material.color.set(0x0000ff);
           }
         }
       }
@@ -141,6 +148,19 @@ let lefthand_point_mesh = null;
 let cubeArray = [];
 let flag = true;
 
+const ip_lt = new THREE.Vector3(-1, 1, -1).unproject(camera1);
+const ip_rb = new THREE.Vector3(1, -1, -1).unproject(camera1);
+const ip_diff = new THREE.Vector3().subVectors(ip_rb, ip_lt);
+const x_scale = Math.abs(ip_diff.x);
+
+function ProjScale(p_ms, cam_pos, src_d, dst_d) {
+  let vec_cam2p = new THREE.Vector3().subVectors(p_ms, cam_pos);
+  return new THREE.Vector3().addVectors(
+    cam_pos,
+    vec_cam2p.multiplyScalar(dst_d / src_d)
+  );
+}
+
 let testPiano = new Piano();
 scene.add(testPiano.keyGroup);
 console.log(testPiano.getPianoGroup());
@@ -153,7 +173,7 @@ function onResults(results) {
   // canvasCtx.drawImage(
   //    results.image, 0, 0, canvasElement.width, canvasElement.height);
   if (results.leftHandLandmarks) {
-    console.log("왼손 발견");
+    // console.log("왼손 발견");
     //console.log(testPiano.keyGroup.children[0].position);
     //let num_lefthand_point = 21;
     if (flag) {
@@ -176,7 +196,7 @@ function onResults(results) {
       }
       let verticesLen = Math.floor(lefthand_vertices.length / 3);
       for (let i = 0; i < verticesLen; i++) {
-        if (i % 4) {
+        if (!(i % 4)) {
           const geometry = new THREE.BoxGeometry(1, 1, 1);
           geometry.computeBoundingBox();
           const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
@@ -221,11 +241,15 @@ function onResults(results) {
         const pos_ps = new THREE.Vector3(
           (pos_ns.x - 0.5) * 2,
           -(pos_ns.y - 0.5) * 2,
-          pos_ns.z
+          -1
         );
         let pos_ws = new THREE.Vector3(pos_ps.x, pos_ps.y, pos_ps.z).unproject(
           camera1
         );
+
+        pos_ws.z = -pos_ns.z * x_scale + camera1.position.z - camera1.near;
+
+        pos_ws = ProjScale(pos_ws, camera1.position, camera1.near, 100.0);
 
         cubeArray[index].position.set(pos_ws.x, pos_ws.y, pos_ws.z);
       }
