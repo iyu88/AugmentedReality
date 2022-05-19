@@ -216,6 +216,7 @@ function onResults(results) {
           cubeArray.push(null);
         }
       }
+      console.log(cubeArray);
       flag = false;
       // const point_mat = new THREE.PointsMaterial({ color: 0xff0000, size: 7 });
       // lefthand_point_geo.setAttribute(
