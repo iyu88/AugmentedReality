@@ -16,6 +16,7 @@ class Piano {
     this.keySizeY = 5;
     this.keySizeZ = 10;
     this.keyNumber = 2;
+    this.isPressed = false;
     for (let i = 0; i < this.keyNumber; i++) {
       const piano_geometry = new THREE.BoxGeometry(
         this.keySizeX,
@@ -48,12 +49,18 @@ class Piano {
         if (cubeArray[i]) {
           cubeArray[i].userData.obb.copy(cubeArray[i].geometry.userData.obb);
           cubeArray[i].userData.obb.applyMatrix4(cubeArray[i].matrixWorld);
-          if (key.userData.obb.intersectsOBB(cubeArray[i].userData.obb)) {
+          console.log(key.isPressed);
+          if (
+            key.userData.obb.intersectsOBB(cubeArray[i].userData.obb) &&
+            !key.isPressed
+          ) {
             console.log("CCCCCCCC");
             key.material.color.set(0xff0000);
             playSound(index);
+            key.isPressed = true;
           } else {
             key.material.color.set(0xffffff);
+            key.isPressed = false;
           }
         }
       }
@@ -315,8 +322,8 @@ holistic.setOptions({
   enableSegmentation: true,
   smoothSegmentation: true,
   refineFaceLandmarks: true,
-  minDetectionConfidence: 0.5,
-  minTrackingConfidence: 0.5,
+  minDetectionConfidence: 0.3,
+  minTrackingConfidence: 0.3,
 });
 holistic.onResults(onResults);
 
