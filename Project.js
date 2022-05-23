@@ -11,11 +11,11 @@ const playSound = (index) => {
 class Piano {
   constructor() {
     this.keyGroup = new THREE.Group();
-    this.pianoPosition = new THREE.Vector3(0, 0, 23);
+    this.pianoPosition = new THREE.Vector3(15, -20, 23);
     this.keySizeX = 10;
-    this.keySizeY = 40;
-    this.keySizeZ = 5;
-    this.keyNumber = 3;
+    this.keySizeY = 5;
+    this.keySizeZ = 10;
+    this.keyNumber = 2;
     for (let i = 0; i < this.keyNumber; i++) {
       const piano_geometry = new THREE.BoxGeometry(
         this.keySizeX,
@@ -26,6 +26,7 @@ class Piano {
       const piano_material = new THREE.MeshBasicMaterial({ color: 0xffffff });
       let piano_mesh = new THREE.Mesh(piano_geometry, piano_material);
       piano_mesh.position.x = this.pianoPosition.x + i * 11;
+      piano_mesh.position.y = this.pianoPosition.y;
       piano_mesh.position.z = this.pianoPosition.z;
       piano_mesh.geometry.userData.obb = new OBB().fromBox3(
         piano_mesh.geometry.boundingBox
@@ -38,6 +39,7 @@ class Piano {
     return this.keyGroup;
   }
   detectCollision() {
+    // => 단순히 부딪혔을 때가 아니라 사용자가 눌렀을 때 > 눌렀을 때의 좌표
     // console.log("DCDCDCDC");
     for (const [index, key] of this.keyGroup.children.entries()) {
       key.userData.obb.copy(key.geometry.userData.obb);
@@ -51,7 +53,7 @@ class Piano {
             key.material.color.set(0xff0000);
             playSound(index);
           } else {
-            key.material.color.set(0x0000ff);
+            key.material.color.set(0xffffff);
           }
         }
       }
@@ -144,9 +146,11 @@ FarPlane_geometry.setAttribute(
 );
 scene.add(FarPlane_mesh);
 
+/* Variables */
 let lefthand_point_mesh = null;
 let cubeArray = [];
 let flag = true;
+/* Variables */
 
 const ip_lt = new THREE.Vector3(-1, 1, -1).unproject(camera1);
 const ip_rb = new THREE.Vector3(1, -1, -1).unproject(camera1);
@@ -195,11 +199,11 @@ function onResults(results) {
         lefthand_vertices.push(pos_ws.x, pos_ws.y, pos_ws.z);
       }
       let verticesLen = Math.floor(lefthand_vertices.length / 3);
+      const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
       for (let i = 0; i < verticesLen; i++) {
-        if (!(i % 4)) {
+        if (!(i % 4) && i) {
           const geometry = new THREE.BoxGeometry(1, 1, 1);
           geometry.computeBoundingBox();
-          const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
           const cube = new THREE.Mesh(geometry, material);
           cube.position.set(
             lefthand_vertices[3 * i + 0],
@@ -212,12 +216,14 @@ function onResults(results) {
           cube.userData.obb = new OBB();
           scene.add(cube);
           cubeArray.push(cube);
-        } else {
-          cubeArray.push(null);
         }
+        //  else {
+        // cubeArray.push(null);
+        // }
       }
-      console.log(cubeArray);
       flag = false;
+      console.log(cubeArray);
+
       // const point_mat = new THREE.PointsMaterial({ color: 0xff0000, size: 7 });
       // lefthand_point_geo.setAttribute(
       //   "position",
@@ -236,8 +242,8 @@ function onResults(results) {
       // lefthand_point_mesh = new THREE.Points(lefthand_point_geo, point_mat);
       // scene.add(lefthand_point_mesh);
     }
-    for (const [index, landmarks] of results.leftHandLandmarks.entries()) {
-      if (cubeArray[index]) {
+    for (const [i, landmarks] of results.leftHandLandmarks.entries()) {
+      if (!(i % 4) && i) {
         const pos_ns = landmarks;
         const pos_ps = new THREE.Vector3(
           (pos_ns.x - 0.5) * 2,
@@ -252,7 +258,11 @@ function onResults(results) {
 
         pos_ws = ProjScale(pos_ws, camera1.position, camera1.near, 100.0);
 
-        cubeArray[index].position.set(pos_ws.x, pos_ws.y, pos_ws.z);
+        cubeArray[Math.floor(i / 4) - 1].position.set(
+          pos_ws.x,
+          pos_ws.y,
+          pos_ws.z
+        );
       }
     }
     testPiano.detectCollision();
