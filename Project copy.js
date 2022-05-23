@@ -8,7 +8,7 @@ class Piano {
     this.keySizeX = 10;
     this.keySizeY = 20;
     this.keySizeZ = 5;
-    this.keyNumber = 5;
+    this.keyNumber = 3;
     for (let i = 0; i < this.keyNumber; i++) {
       const piano_geometry = new THREE.BoxGeometry(
         this.keySizeX,
@@ -19,18 +19,40 @@ class Piano {
       let piano_mesh = new THREE.Mesh(piano_geometry, piano_material);
       piano_mesh.position.x = this.pianoPosition.x + i * 11;
       piano_mesh.position.z = this.pianoPosition.z;
+      piano_mesh.geometry.computeBoundingBox();
+      piano_mesh.geometry.boundingBox.needsUpdate = true;
+      console.log(piano_mesh.geometry.boundingBox);
       this.keyGroup.add(piano_mesh);
     }
+    this.BB = new THREE.Box3();
   }
   getPianoGroup() {
     return this.keyGroup;
   }
-  detectCollision() {
+  detectCollision(testmesh) {
     console.log(this.keyGroup.children[1].position);
-    for (const key in this.keyGroup.children) {
-      console.log(key.position);
+    console.log(testmesh);
+    const array = testmesh.geometry.attributes.position.array;
+    const arraylength = array.length/3;
+    console.log("array:",array);
+    for (const [index, key] of this.keyGroup.children.entries()) {
+      console.log('check:',key.geometry.boundingBox);
+      this.BB.copy(key.geometry.boundingBox);
+      console.log("this.BB:",this.BB);
+      for(let i=0 ; i < arraylength ; i++){
+        console.log(this.BB.containsPoint(new THREE.Vector3(array[3*i],array[3*i+1],array[3*i+2])));
+        // if(this.BB.containsPoint(array[i],array[i+1],array[i+2])){
+        //   console.log("collision!");
+        //   this.playSound(index);
+        // }
+      }
     }
   }
+  playSound = (index) => {
+    let audio = new Audio(`./sounds/${index}.mp3`);
+    audio.loop = false;
+    audio.play();
+  };
 }
 
 const videoElement = document.getElementsByClassName("input_video")[0];
@@ -151,10 +173,9 @@ function onResults(results) {
     //let num_lefthand_point = 21;
     if (lefthand_point_mesh == null) {
       //console.log(HAND_CONNECTIONS);
-      console.log(testPiano.detectCollision());
       let lefthand_point_geo = new THREE.BufferGeometry();
       const lefthand_vertices = [];
-      for (const landmarks of results.leftHandLandmarks) {
+      for (const [index,landmarks] of results.leftHandLandmarks.entries()) {
         // left hand landmarks 21개
         const pos_ns = landmarks;
         const pos_ps = new THREE.Vector3(
@@ -168,13 +189,14 @@ function onResults(results) {
         lefthand_vertices.push(pos_ws.x, pos_ws.y, pos_ws.z);
       }
       const point_mat = new THREE.PointsMaterial({ color: 0xff0000, size: 7 });
+      const lefthand_geo_bufferattribute = new THREE.Float32BufferAttribute(lefthand_vertices,3);
+      console.log(lefthand_geo_bufferattribute);
       lefthand_point_geo.setAttribute(
         "position",
-        new THREE.Float32BufferAttribute(lefthand_vertices, 3)
+        lefthand_geo_bufferattribute
       );
       lefthand_point_mesh = new THREE.Points(lefthand_point_geo, point_mat);
       scene.add(lefthand_point_mesh);
-      console.log(lefthand_point_mesh);
     }
     let positions = lefthand_point_mesh.geometry.attributes.position.array;
     let i = 0;
@@ -197,8 +219,8 @@ function onResults(results) {
       positions[3 * i + 2] = pos_ws.z;
       i += 1;
     }
-    lefthand_point_mesh.geometry.computeBoundingBox();
-    lefthand_point_mesh.geometry.boundingBox.needsUpdate = true;
+    console.log("hello");
+    testPiano.detectCollision(lefthand_point_mesh);
     //console.log(lefthand_point_mesh.geometry.boundingBox);
     lefthand_point_mesh.geometry.attributes.position.needsUpdate = true;
   }
