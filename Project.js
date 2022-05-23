@@ -1,6 +1,10 @@
 import * as THREE from "./node_modules/three/build/three.module.js";
 import { OrbitControls } from "./node_modules/three/examples/jsm/controls/OrbitControls.js";
 import { OBB } from "./node_modules/three/examples/jsm/math/OBB.js";
+import Stats from "./node_modules/three/examples/jsm/libs/stats.module.js";
+
+let stats = new Stats();
+document.body.appendChild(stats.dom);
 
 const playSound = (index) => {
   let audio = new Audio(`./sounds/${index}.mp3`);
@@ -156,6 +160,7 @@ scene.add(FarPlane_mesh);
 /* Variables */
 let lefthand_point_mesh = null;
 let cubeArray = [];
+let pianoArray = [];
 let flag = true;
 /* Variables */
 
@@ -172,9 +177,9 @@ function ProjScale(p_ms, cam_pos, src_d, dst_d) {
   );
 }
 
-let testPiano = new Piano();
-scene.add(testPiano.keyGroup);
-console.log(testPiano.getPianoGroup());
+// let testPiano = new Piano();
+// scene.add(testPiano.keyGroup);
+// console.log(testPiano.getPianoGroup());
 function onResults(results) {
   let texture_frame = new THREE.CanvasTexture(results.image);
   texture_frame.center = new THREE.Vector2(0.5, 0.5);
@@ -207,21 +212,23 @@ function onResults(results) {
       }
       let verticesLen = Math.floor(lefthand_vertices.length / 3);
       const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+      const geometry = new THREE.BoxGeometry(1, 1, 1);
+      geometry.computeBoundingBox();
+      geometry.userData.obb = new OBB();
+      // geometry.userData.obb.halfSize.copy(size).multiplyScalar(0.5);
       for (let i = 0; i < verticesLen; i++) {
         if (!(i % 4) && i) {
-          const geometry = new THREE.BoxGeometry(1, 1, 1);
-          geometry.computeBoundingBox();
           const cube = new THREE.Mesh(geometry, material);
           cube.position.set(
             lefthand_vertices[3 * i + 0],
             lefthand_vertices[3 * i + 1],
             lefthand_vertices[3 * i + 2]
           );
-          cube.geometry.userData.obb = new OBB().fromBox3(
-            cube.geometry.boundingBox
-          );
-          cube.userData.obb = new OBB();
+          // cube.geometry.userData.obb = new OBB().fromBox3(
+          //   cube.geometry.boundingBox
+          // );
           scene.add(cube);
+          cube.userData.obb = new OBB();
           cubeArray.push(cube);
         }
         //  else {
@@ -230,6 +237,21 @@ function onResults(results) {
       }
       flag = false;
       console.log(cubeArray);
+
+      /* Piano */
+      let p$m = new THREE.MeshBasicMaterial({ color: 0xffffff });
+      let p$g = new THREE.BoxGeometry(10, 5, 10);
+      p$g.userData.obb = new OBB();
+      let p$p = new THREE.Vector3(15, -20, 23);
+      for (let i = 0; i < 2; i++) {
+        let p$ = new THREE.Mesh(p$g, p$m);
+        p$.position.x = p$p.x + i * 11;
+        p$.position.y = p$p.y;
+        p$.position.z = p$p.z;
+        scene.add(p$);
+        p$.userData.obb = new OBB();
+        pianoArray.push(p$);
+      }
 
       // const point_mat = new THREE.PointsMaterial({ color: 0xff0000, size: 7 });
       // lefthand_point_geo.setAttribute(
@@ -272,7 +294,30 @@ function onResults(results) {
         );
       }
     }
-    testPiano.detectCollision();
+    // testPiano.detectCollision();
+
+    for (let i = 0; i < pianoArray.length; i++) {
+      const piano = pianoArray[i];
+      piano.userData.obb.copy(piano.geometry.userData.obb);
+      piano.userData.obb.applyMatrix4(piano.matrixWorld);
+      piano.material.color.setHex(0x00ff00);
+    }
+
+    for (let i = 0; i < pianoArray.length; i++) {
+      const piano = pianoArray[i];
+      const obb = piano.userData.obb;
+      for (let j = 0; j < cubeArray.length; j++) {
+        const cube = cubeArray[j];
+        const obbToTest = cube.userData.obb;
+        if (obb.intersectsOBB(obbToTest) === true) {
+          piano.material.color.setHex(0xff0000);
+          cube.material.color.setHex(0xff0000);
+          playSound(i);
+        }
+      }
+    }
+
+    stats.update();
     /*
     let positions = lefthand_point_mesh.geometry.attributes.position.array;
     let i = 0;
@@ -335,3 +380,5 @@ const camera = new Camera(videoElement, {
   height: 480,
 });
 camera.start();
+
+stats.begin();
