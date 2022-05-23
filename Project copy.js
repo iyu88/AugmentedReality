@@ -21,7 +21,6 @@ class Piano {
       piano_mesh.position.z = this.pianoPosition.z;
       piano_mesh.geometry.computeBoundingBox();
       piano_mesh.geometry.boundingBox.needsUpdate = true;
-      console.log(piano_mesh.geometry.boundingBox);
       this.keyGroup.add(piano_mesh);
     }
     this.BB = new THREE.Box3();
@@ -30,15 +29,11 @@ class Piano {
     return this.keyGroup;
   }
   detectCollision(testmesh) {
-    console.log(this.keyGroup.children[1].position);
-    console.log(testmesh);
     const array = testmesh.geometry.attributes.position.array;
     const arraylength = array.length/3;
-    console.log("array:",array);
     for (const [index, key] of this.keyGroup.children.entries()) {
       console.log('check:',key.geometry.boundingBox);
       this.BB.copy(key.geometry.boundingBox);
-      console.log("this.BB:",this.BB);
       for(let i=0 ; i < arraylength ; i++){
         console.log(this.BB.containsPoint(new THREE.Vector3(array[3*i],array[3*i+1],array[3*i+2])));
         // if(this.BB.containsPoint(array[i],array[i+1],array[i+2])){
