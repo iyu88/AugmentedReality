@@ -4,7 +4,7 @@ import { OrbitControls } from "./node_modules/three/examples/jsm/controls/OrbitC
 class Piano {
   constructor() {
     this.keyGroup = new THREE.Group();
-    this.pianoPosition = new THREE.Vector3(0, 0, 30);
+    this.pianoPosition = new THREE.Vector3(0, 0, 20);
     this.keySizeX = 10;
     this.keySizeY = 20;
     this.keySizeZ = 5;
@@ -19,6 +19,7 @@ class Piano {
       let piano_mesh = new THREE.Mesh(piano_geometry, piano_material);
       piano_mesh.position.x = this.pianoPosition.x + i * 11;
       piano_mesh.position.z = this.pianoPosition.z;
+      piano_mesh.geometry.attributes.position.needsUpdate = true;
       piano_mesh.geometry.computeBoundingBox();
       piano_mesh.geometry.boundingBox.needsUpdate = true;
       this.keyGroup.add(piano_mesh);
@@ -32,14 +33,18 @@ class Piano {
     const array = testmesh.geometry.attributes.position.array;
     const arraylength = array.length/3;
     for (const [index, key] of this.keyGroup.children.entries()) {
-      console.log('check:',key.geometry.boundingBox);
-      this.BB.copy(key.geometry.boundingBox);
+      //console.log('check:',key.geometry.boundingBox);
+      //this.BB.copy(key.geometry.boundingBox);
+      const BB = new THREE.Box3();
+      BB.setFromObject(key);
+      console.log(BB);
       for(let i=0 ; i < arraylength ; i++){
-        console.log(this.BB.containsPoint(new THREE.Vector3(array[3*i],array[3*i+1],array[3*i+2])));
-        // if(this.BB.containsPoint(array[i],array[i+1],array[i+2])){
-        //   console.log("collision!");
-        //   this.playSound(index);
-        // }
+        //console.log(BB.containsPoint(new THREE.Vector3(array[3*i],array[3*i+1],array[3*i+2])));
+        if(BB.containsPoint(new THREE.Vector3(array[3*i],array[3*i+1],array[3*i+2]))){
+          console.log("collision!");
+          key.material.color.set(0xFF0000);
+          this.playSound(index);
+        }
       }
     }
   }
