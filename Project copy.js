@@ -18,6 +18,7 @@ class Piano {
       const piano_material = new THREE.MeshBasicMaterial({ color: 0xffffff });
       let piano_mesh = new THREE.Mesh(piano_geometry, piano_material);
       piano_mesh.position.x = this.pianoPosition.x + i * (this.keySizeX+1);
+      piano_mesh.position.y = this.pianoPosition.y;
       piano_mesh.position.z = this.pianoPosition.z;
       piano_mesh.geometry.attributes.position.needsUpdate = true;
       piano_mesh.geometry.computeBoundingBox();
@@ -36,7 +37,7 @@ class Piano {
       //this.BB.copy(key.geometry.boundingBox);
       const BB = new THREE.Box3();
       BB.setFromObject(key);
-      console.log(BB);
+      //console.log(BB);
       for(let i=0 ; i < arraylength ; i++){
         //console.log(BB.containsPoint(new THREE.Vector3(array[3*i],array[3*i+1],array[3*i+2])));
         if(BB.containsPoint(new THREE.Vector3(array[3*i],array[3*i+1],array[3*i+2]))){
@@ -52,6 +53,17 @@ class Piano {
     audio.loop = false;
     audio.play();
   };
+  updatePosition(chin){ // set piano in front of camera
+    console.log(chin);
+    this.pianoPosition = new THREE.Vector3(chin.x,chin.y,chin.z);
+    for (const [index, key] of this.keyGroup.children.entries()) {
+      key.position.x = this.pianoPosition.x + index * (this.keySizeX+1);
+      key.position.y = this.pianoPosition.y;
+      key.position.z = this.pianoPosition.z;
+      key.geometry.attributes.position.needsUpdate = true;
+
+    }
+  }
 }
 
 const videoElement = document.getElementsByClassName("input_video")[0];
@@ -162,9 +174,8 @@ function onResults(results) {
   let texture_frame = new THREE.CanvasTexture(results.image);
   texture_frame.center = new THREE.Vector2(0.5, 0.5);
   texture_frame.rotation = Math.PI;
-
   if(results.faceLandmarks){
-    console.log("pose발견");
+    //console.log("face발견");
     let test_vertices = [];
     if(test_point_mesh == null){
       //console.log(results.poseLandmarks[12]);
@@ -180,7 +191,7 @@ function onResults(results) {
           camera1
         );
         //pos_ws.z = -pos_ns.z * x_scale + camera1.position.z - camera1.near; //Newly compute Z
-        // pos_ws = ProjScale(pos_ws, camera1.position, camera1.near, 100.0);
+        pos_ws = ProjScale(pos_ws, camera1.position, camera1.near, 100.0);
         test_vertices.push(pos_ws.x, pos_ws.y, pos_ws.z);
       }
       const test_geo = new THREE.BufferGeometry();
@@ -193,9 +204,23 @@ function onResults(results) {
       test_point_mesh = new THREE.Points(test_geo, point_mat);
       scene.add(test_point_mesh);
     }
+    //console.log(results.faceLandmarks[152]);
+    //testPiano.updatePosition(results.faceLandmarks[152]);
+    const pos_chin = results.faceLandmarks[152];
+    const pos_ps_chin = new THREE.Vector3(
+      (pos_chin.x - 0.5) * 2,
+      -(pos_chin.y - 0.5) * 2,
+      pos_chin.z
+    );
+    let pos_ws_chin = new THREE.Vector3(pos_ps_chin.x, pos_ps_chin.y, pos_ps_chin.z).unproject(
+      camera1
+    );
+    pos_ws_chin = ProjScale(pos_ws_chin, camera1.position, camera1.near, 100.0);
+    testPiano.updatePosition(pos_ws_chin);
   }
+
   if (results.leftHandLandmarks) {
-    console.log("왼손 발견");
+    //console.log("왼손 발견");
     if (lefthand_point_mesh == null) {
       //console.log(HAND_CONNECTIONS);
       let lefthand_point_geo = new THREE.BufferGeometry();
@@ -215,7 +240,7 @@ function onResults(results) {
       }
       const point_mat = new THREE.PointsMaterial({ color: 0xff0000, size: 7 });
       const lefthand_geo_bufferattribute = new THREE.Float32BufferAttribute(lefthand_vertices,3);
-      console.log(lefthand_geo_bufferattribute);
+      //console.log(lefthand_geo_bufferattribute);
       lefthand_point_geo.setAttribute(
         "position",
         lefthand_geo_bufferattribute
@@ -230,13 +255,13 @@ function onResults(results) {
       const pos_ps = new THREE.Vector3(
         (pos_ns.x - 0.5) * 2,
         -(pos_ns.y - 0.5) * 2,
-        -1
+        -1 // -1
       );
       let pos_ws = new THREE.Vector3(pos_ps.x, pos_ps.y, pos_ps.z).unproject(
         camera1
       );
 
-      pos_ws.z = -pos_ns.z * x_scale + camera1.position.z - camera1.near; //Newly compute Z
+      pos_ws.z = -pos_ns.z * x_scale + camera1.position.z - camera1.near; // Newly compute Z
 
       pos_ws = ProjScale(pos_ws, camera1.position, camera1.near, 100.0);
       positions[3 * i + 0] = pos_ws.x;
@@ -244,7 +269,7 @@ function onResults(results) {
       positions[3 * i + 2] = pos_ws.z;
       i += 1;
     }
-    console.log("hello");
+    //console.log("hello");
     testPiano.detectCollision(lefthand_point_mesh);
     lefthand_point_mesh.geometry.attributes.position.needsUpdate = true;
   }
