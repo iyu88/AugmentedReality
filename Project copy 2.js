@@ -7,7 +7,7 @@ class Piano {
     this.pianoPosition = new THREE.Vector3(0, 0, 20);
     this.keySizeX = 10;
     this.keySizeY = 5;
-    this.keySizeZ = 50;
+    this.keySizeZ = 30;
     this.keyNumber = 3;
     // this.isPressed = false;
     for (let i = 0; i < this.keyNumber; i++) {
@@ -24,7 +24,8 @@ class Piano {
       piano_mesh.geometry.computeBoundingBox();
       piano_mesh.geometry.boundingBox.needsUpdate = true;
       piano_mesh.isPressed = false;
-      piano_mesh.isPlaying = false;
+      piano_mesh.finger = null;
+      // piano_mesh.isPlaying = false;
       piano_mesh.audioSrc = new Audio(`./sounds/${i}.mp3`);
       piano_mesh.audioSrc.loop = false;
       console.log(piano_mesh);
@@ -39,32 +40,32 @@ class Piano {
     const array = testmesh.geometry.attributes.position.array;
     const arraylength = array.length / 3;
     for (const [index, key] of this.keyGroup.children.entries()) {
-      //console.log('check:',key.geometry.boundingBox);
-      //this.BB.copy(key.geometry.boundingBox);
+      console.log(key.finger);
       const BB = new THREE.Box3();
       BB.setFromObject(key);
-      // console.log(BB);
       for (let i = 0; i < arraylength; i += 4) {
-        //console.log(BB.containsPoint(new THREE.Vector3(array[3*i],array[3*i+1],array[3*i+2])));
-        // console.log(this.isPressed);
         if (
           BB.containsPoint(
             new THREE.Vector3(array[3 * i], array[3 * i + 1], array[3 * i + 2])
           )
         ) {
-          // console.log("collision!");
-          key.material.color.set(0xff0000);
-          console.log(key.isPressed + ", " + i);
-          if (key.isPressed === false) {
-            // this.playSound(index);
+          if (
+            key.isPressed === false &&
+            key.audioSrc.paused &&
+            key.finger !== i
+          ) {
+            console.log("contain--------------" + index + i);
+            key.material.color.set(0xff0000);
             key.audioSrc.play();
             key.isPressed = true;
+            key.finger = i;
           }
         } else {
           key.material.color.set(0xffffff);
-          console.log(key.audioSrc.ended);
-          if (key.isPressed === true) {
+          if (key.isPressed === true && key.finger === i) {
+            console.log("--------------contain" + index + i);
             key.isPressed = false;
+            // key.audioSrc.pause();
           }
         }
       }
