@@ -169,6 +169,7 @@ const ip_diff = new THREE.Vector3().subVectors(ip_rb, ip_lt);
 const x_scale = Math.abs(ip_diff.x);
 
 let lefthand_point_mesh = null;
+let righthand_point_mesh = null;
 
 let testPiano = new Piano();
 scene.add(testPiano.keyGroup);
@@ -195,7 +196,6 @@ function onResults(results) {
     //console.log(testPiano.keyGroup.children[0].position);
     //let num_lefthand_point = 21;
     if (lefthand_point_mesh == null) {
-      //console.log(HAND_CONNECTIONS);
       let lefthand_point_geo = new THREE.BufferGeometry();
       const lefthand_vertices = [];
       for (const [index, landmarks] of results.leftHandLandmarks.entries()) {
@@ -257,6 +257,71 @@ function onResults(results) {
     //console.log(lefthand_point_mesh.geometry.boundingBox);
     lefthand_point_mesh.geometry.attributes.position.needsUpdate = true;
   }
+
+  // RIGHT HAND
+  if (results.rightHandLandmarks) {
+    if (righthand_point_mesh == null) {
+      let righthand_point_geo = new THREE.BufferGeometry();
+      const righthand_vertices = [];
+      for (const [index, landmarks] of results.rightHandLandmarks.entries()) {
+        if (index % 4 === 0) {
+          const pos_ns = landmarks;
+          const pos_ps = new THREE.Vector3(
+            (pos_ns.x - 0.5) * 2,
+            -(pos_ns.y - 0.5) * 2,
+            pos_ns.z
+          );
+          let pos_ws = new THREE.Vector3(
+            pos_ps.x,
+            pos_ps.y,
+            pos_ps.z
+          ).unproject(camera1);
+          righthand_vertices.push(pos_ws.x, pos_ws.y, pos_ws.z);
+        } else {
+          righthand_vertices.push(0, 0, 0);
+        }
+      }
+      const point_mat = new THREE.PointsMaterial({ color: 0xff0000, size: 7 });
+      const righthand_geo_bufferattribute = new THREE.Float32BufferAttribute(
+        righthand_vertices,
+        3
+      );
+      righthand_point_geo.setAttribute(
+        "position",
+        righthand_geo_bufferattribute
+      );
+      righthand_point_mesh = new THREE.Points(righthand_point_geo, point_mat);
+      scene.add(righthand_point_mesh);
+    }
+    let positions = righthand_point_mesh.geometry.attributes.position.array;
+    for (const [i, landmarks] of results.rightHandLandmarks.entries()) {
+      if (i % 4 === 0) {
+        const pos_ns = landmarks;
+        const pos_ps = new THREE.Vector3(
+          (pos_ns.x - 0.5) * 2,
+          -(pos_ns.y - 0.5) * 2,
+          -1
+        );
+        let pos_ws = new THREE.Vector3(pos_ps.x, pos_ps.y, pos_ps.z).unproject(
+          camera1
+        );
+
+        pos_ws.z = -pos_ns.z * x_scale + camera1.position.z - camera1.near; //Newly compute Z
+
+        pos_ws = ProjScale(pos_ws, camera1.position, camera1.near, 100.0);
+        positions[3 * i + 0] = pos_ws.x;
+        positions[3 * i + 1] = pos_ws.y;
+        positions[3 * i + 2] = pos_ws.z;
+      } else {
+        positions[3 * i + 0] = 0;
+        positions[3 * i + 1] = 0;
+        positions[3 * i + 2] = 0;
+      }
+    }
+    testPiano.detectCollision(righthand_point_mesh);
+    righthand_point_mesh.geometry.attributes.position.needsUpdate = true;
+  }
+
   controls_world.update();
   FarPlane_mesh.material.map = texture_frame;
   renderer.render(scene, camera1);
