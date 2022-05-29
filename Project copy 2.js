@@ -5,6 +5,8 @@ class Piano {
   constructor() {
     this.keyGroup = new THREE.Group();
     this.pianoPosition = new THREE.Vector3(-40, -20, 10);
+    this.pianoPositionMatrix = new THREE.Matrix4().makeTranslation(-40,-20,10);
+    console.log(this.pianoPositionMatrix);
     this.keySizeX = 6;
     this.keySizeY = 5;
     this.keySizeZ = 30;
@@ -19,10 +21,17 @@ class Piano {
       piano_material.transparent = true;
       piano_material.opacity = 0.6;
       let piano_mesh = new THREE.Mesh(piano_geometry, piano_material);
-      piano_mesh.position.x = this.pianoPosition.x;
-      piano_mesh.position.z = this.pianoPosition.z;
-      piano_mesh.rotation.x = Math.PI / 8;
-      piano_mesh.geometry.attributes.position.needsUpdate = true;
+      piano_mesh.matrixAutoUpdate = false;
+      piano_mesh.matrix.multiply(this.pianoPositionMatrix);
+      let movematrix2 = new THREE.Matrix4().makeTranslation(11*i,0,0);
+      piano_mesh.matrix.multiply(movematrix2);
+      //piano_mesh.matrix.
+      //piano_mesh.position.y = this.pianoPosition.y;
+      //piano_mesh.position.z = this.pianoPosition.z;
+      let rotationmatrix = new THREE.Matrix4().makeRotationX(Math.PI / 8);
+      piano_mesh.matrix.multiply(rotationmatrix);
+      //piano_mesh.rotation.x = Math.PI / 8;
+      //piano_mesh.geometry.attributes.position.needsUpdate = true;
       piano_mesh.geometry.computeBoundingBox();
       piano_mesh.geometry.boundingBox.needsUpdate = true;
       piano_mesh.isPressed = false;
@@ -78,14 +87,14 @@ class Piano {
     }
   }
   updatePosition(chin) {
-    let tempPosition = new THREE.Vector3()
-      .copy(this.pianoPosition)
-      .add(new THREE.Vector3(chin.x, chin.y, chin.z));
+    let chinmatrix = new THREE.Matrix4().makeTranslation(chin.x, chin.y, chin.z);
     for (const [index, key] of this.keyGroup.children.entries()) {
-      key.position.x = tempPosition.x + index * (this.keySizeX + 6);
-      key.position.y = tempPosition.y - 10;
-      key.position.z = tempPosition.z;
-      key.geometry.attributes.position.needsUpdate = true;
+      key.matrix.setPosition(0,0,0);
+      key.matrix.multiply(this.pianoPositionMatrix);
+      let movematrix2 = new THREE.Matrix4().makeTranslation(11*index,0,0);
+      key.matrix.multiply(movematrix2);
+      key.matrix = key.matrix
+      key.matrix.multiply(chinmatrix);
     }
   }
   playSound(index) {
