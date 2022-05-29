@@ -147,7 +147,7 @@ controls_world.dampingFactor = 0.05;
 controls_world.enableZoom = true;
 controls_world.update();
 
-controls_world.target.set(0, 0, 40);
+controls_world.target.set(0, 0, 20);
 const pointMap = {};
 const w = 1,
   h = 1;
