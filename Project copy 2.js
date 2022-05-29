@@ -4,11 +4,11 @@ import { OrbitControls } from "./node_modules/three/examples/jsm/controls/OrbitC
 class Piano {
   constructor() {
     this.keyGroup = new THREE.Group();
-    this.pianoPosition = new THREE.Vector3(-50, -10, 0);
-    this.keySizeX = 10;
+    this.pianoPosition = new THREE.Vector3(-40, -20, 0);
+    this.keySizeX = 6;
     this.keySizeY = 5;
     this.keySizeZ = 30;
-    this.keyNumber = 10;
+    this.keyNumber = 8;
     for (let i = 0; i < this.keyNumber; i++) {
       const piano_geometry = new THREE.BoxGeometry(
         this.keySizeX,
@@ -16,8 +16,10 @@ class Piano {
         this.keySizeZ
       );
       const piano_material = new THREE.MeshBasicMaterial({ color: 0xffffff });
+      piano_material.transparent = true;
+      piano_material.opacity = 0.6;
       let piano_mesh = new THREE.Mesh(piano_geometry, piano_material);
-      piano_mesh.position.x = this.pianoPosition.x + i * 11;
+      piano_mesh.position.x = this.pianoPosition.x;
       piano_mesh.position.z = this.pianoPosition.z;
       piano_mesh.rotation.x = Math.PI / 8;
       piano_mesh.geometry.attributes.position.needsUpdate = true;
@@ -25,8 +27,6 @@ class Piano {
       piano_mesh.geometry.boundingBox.needsUpdate = true;
       piano_mesh.isPressed = false;
       piano_mesh.finger = null;
-      // piano_mesh.audioSrc = new Audio(`./sounds/${i}.mp3`);
-      // piano_mesh.audioSrc.loop = false;
       console.log(piano_mesh);
       this.keyGroup.add(piano_mesh);
     }
@@ -61,25 +61,17 @@ class Piano {
             )
           )
         ) {
-          if (
-            key.isPressed === false &&
-            // key.audioSrc.paused &&
-            key.finger !== i
-          ) {
-            console.log("contain--------------" + index + i);
+          if (key.isPressed === false && key.finger !== i) {
             key.material.color.set(0xff0000);
-            // key.audioSrc.play();
             this.playSound(index);
             key.isPressed = true;
             key.finger = i;
           }
         } else {
           if (key.isPressed === true && key.finger === i) {
-            console.log("--------------contain" + index + i);
             key.material.color.set(0xffffff);
             key.isPressed = false;
             key.finger = null;
-            // key.audioSrc.pause();
           }
         }
       }
@@ -92,7 +84,7 @@ class Piano {
       .add(new THREE.Vector3(chin.x, chin.y, chin.z));
     // let tempPosition = new THREE.Vector3(chin.x, chin.y, chin.z)
     for (const [index, key] of this.keyGroup.children.entries()) {
-      key.position.x = tempPosition.x + index * (this.keySizeX + 1);
+      key.position.x = tempPosition.x + index * (this.keySizeX + 6);
       key.position.y = tempPosition.y - 10;
       key.position.z = tempPosition.z;
       key.geometry.attributes.position.needsUpdate = true;
@@ -238,7 +230,7 @@ function onResults(results) {
       const lefthand_vertices = [];
       for (const [index, landmarks] of results.leftHandLandmarks.entries()) {
         // left hand landmarks 21개
-        if (index % 4 === 0 && index > 0) {
+        if (index % 4 === 0 && index > 4) {
           const pos_ns = landmarks;
           const pos_ps = new THREE.Vector3(
             (pos_ns.x - 0.5) * 2,
@@ -265,7 +257,7 @@ function onResults(results) {
     }
     let positions = lefthand_point_mesh.geometry.attributes.position.array;
     for (const [i, landmarks] of results.leftHandLandmarks.entries()) {
-      if (i % 4 === 0 && i > 0) {
+      if (i % 4 === 0 && i > 4) {
         const pos_ns = landmarks;
         const pos_ps = new THREE.Vector3(
           (pos_ns.x - 0.5) * 2,
@@ -279,9 +271,9 @@ function onResults(results) {
         pos_ws.z = -pos_ns.z * x_scale + camera1.position.z - camera1.near; //Newly compute Z
 
         pos_ws = ProjScale(pos_ws, camera1.position, camera1.near, 100.0);
-        positions[3 * (i / 4 - 1) + 0] = pos_ws.x;
-        positions[3 * (i / 4 - 1) + 1] = pos_ws.y;
-        positions[3 * (i / 4 - 1) + 2] = pos_ws.z;
+        positions[3 * (i / 4 - 2) + 0] = pos_ws.x;
+        positions[3 * (i / 4 - 2) + 1] = pos_ws.y;
+        positions[3 * (i / 4 - 2) + 2] = pos_ws.z;
       }
     }
     lefthand_point_mesh.geometry.attributes.position.needsUpdate = true;
@@ -293,7 +285,7 @@ function onResults(results) {
       let righthand_point_geo = new THREE.BufferGeometry();
       const righthand_vertices = [];
       for (const [index, landmarks] of results.rightHandLandmarks.entries()) {
-        if (index % 4 === 0 && index > 0) {
+        if (index % 4 === 0 && index > 4) {
           const pos_ns = landmarks;
           const pos_ps = new THREE.Vector3(
             (pos_ns.x - 0.5) * 2,
@@ -322,7 +314,7 @@ function onResults(results) {
     }
     let positions = righthand_point_mesh.geometry.attributes.position.array;
     for (const [i, landmarks] of results.rightHandLandmarks.entries()) {
-      if (i % 4 === 0 && i > 0) {
+      if (i % 4 === 0 && i > 4) {
         const pos_ns = landmarks;
         const pos_ps = new THREE.Vector3(
           (pos_ns.x - 0.5) * 2,
@@ -336,9 +328,9 @@ function onResults(results) {
         pos_ws.z = -pos_ns.z * x_scale + camera1.position.z - camera1.near; //Newly compute Z
 
         pos_ws = ProjScale(pos_ws, camera1.position, camera1.near, 100.0);
-        positions[3 * (i / 4 - 1) + 0] = pos_ws.x;
-        positions[3 * (i / 4 - 1) + 1] = pos_ws.y;
-        positions[3 * (i / 4 - 1) + 2] = pos_ws.z;
+        positions[3 * (i / 4 - 2) + 0] = pos_ws.x;
+        positions[3 * (i / 4 - 2) + 1] = pos_ws.y;
+        positions[3 * (i / 4 - 2) + 2] = pos_ws.z;
       }
     }
     righthand_point_mesh.geometry.attributes.position.needsUpdate = true;
