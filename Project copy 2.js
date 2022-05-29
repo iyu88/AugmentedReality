@@ -71,11 +71,11 @@ class Piano {
       }
     }
   }
-  playSound = (index) => {
-    let audio = new Audio(`./sounds/${index}.mp3`);
-    audio.loop = false;
-    audio.play();
-  };
+  // playSound = (index) => {
+  //   let audio = new Audio(`./sounds/${index}.mp3`);
+  //   audio.loop = false;
+  //   audio.play();
+  // };
 }
 
 const videoElement = document.getElementsByClassName("input_video")[0];
@@ -187,10 +187,6 @@ function onResults(results) {
   let texture_frame = new THREE.CanvasTexture(results.image);
   texture_frame.center = new THREE.Vector2(0.5, 0.5);
   texture_frame.rotation = Math.PI;
-  // canvasCtx.save();
-  // canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-  // canvasCtx.drawImage(
-  //    results.image, 0, 0, canvasElement.width, canvasElement.height);
   if (results.leftHandLandmarks) {
     // console.log("왼손 발견");
     //console.log(testPiano.keyGroup.children[0].position);
@@ -200,7 +196,7 @@ function onResults(results) {
       const lefthand_vertices = [];
       for (const [index, landmarks] of results.leftHandLandmarks.entries()) {
         // left hand landmarks 21개
-        if (index % 4 === 0) {
+        if (index % 4 === 0 && index > 0) {
           const pos_ns = landmarks;
           const pos_ps = new THREE.Vector3(
             (pos_ns.x - 0.5) * 2,
@@ -229,7 +225,7 @@ function onResults(results) {
     }
     let positions = lefthand_point_mesh.geometry.attributes.position.array;
     for (const [i, landmarks] of results.leftHandLandmarks.entries()) {
-      if (i % 4 === 0) {
+      if (i % 4 === 0 && i > 0) {
         const pos_ns = landmarks;
         const pos_ps = new THREE.Vector3(
           (pos_ns.x - 0.5) * 2,
@@ -252,9 +248,7 @@ function onResults(results) {
         positions[3 * i + 2] = 0;
       }
     }
-    // console.log("hello");
     testPiano.detectCollision(lefthand_point_mesh);
-    //console.log(lefthand_point_mesh.geometry.boundingBox);
     lefthand_point_mesh.geometry.attributes.position.needsUpdate = true;
   }
 
@@ -264,7 +258,7 @@ function onResults(results) {
       let righthand_point_geo = new THREE.BufferGeometry();
       const righthand_vertices = [];
       for (const [index, landmarks] of results.rightHandLandmarks.entries()) {
-        if (index % 4 === 0) {
+        if (index % 4 === 0 && index > 0) {
           const pos_ns = landmarks;
           const pos_ps = new THREE.Vector3(
             (pos_ns.x - 0.5) * 2,
@@ -295,7 +289,7 @@ function onResults(results) {
     }
     let positions = righthand_point_mesh.geometry.attributes.position.array;
     for (const [i, landmarks] of results.rightHandLandmarks.entries()) {
-      if (i % 4 === 0) {
+      if (i % 4 === 0 && i > 0) {
         const pos_ns = landmarks;
         const pos_ps = new THREE.Vector3(
           (pos_ns.x - 0.5) * 2,
@@ -335,6 +329,7 @@ const holistic = new Holistic({
   },
 });
 holistic.setOptions({
+  selfieMode: true,
   modelComplexity: 1,
   smoothLandmarks: true,
   enableSegmentation: true,
