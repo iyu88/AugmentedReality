@@ -4,7 +4,7 @@ import { OrbitControls } from "./node_modules/three/examples/jsm/controls/OrbitC
 class Piano {
   constructor() {
     this.keyGroup = new THREE.Group();
-    this.pianoPosition = new THREE.Vector3(-40, -20, 0);
+    this.pianoPosition = new THREE.Vector3(-40, -20, 10);
     this.keySizeX = 6;
     this.keySizeY = 5;
     this.keySizeZ = 30;
@@ -127,9 +127,9 @@ const camera_world = new THREE.PerspectiveCamera(
   1,
   2000
 );
-camera_world.position.set(200, 0, 400);
-camera_world.lookAt(0, 0, 0);
+camera_world.position.set(0, 60, 60);
 camera_world.up.set(0, 1, 0);
+camera_world.lookAt(0, 0, 100);
 
 const controls_world = new OrbitControls(
   camera_world,
@@ -140,6 +140,7 @@ controls_world.dampingFactor = 0.05;
 controls_world.enableZoom = true;
 controls_world.update();
 
+controls_world.target.set(0,0,40);
 const pointMap = {};
 const w = 1,
   h = 1;
