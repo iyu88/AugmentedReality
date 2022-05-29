@@ -78,11 +78,9 @@ class Piano {
     }
   }
   updatePosition(chin) {
-    // set piano in the position of face chin
     let tempPosition = new THREE.Vector3()
       .copy(this.pianoPosition)
       .add(new THREE.Vector3(chin.x, chin.y, chin.z));
-    // let tempPosition = new THREE.Vector3(chin.x, chin.y, chin.z)
     for (const [index, key] of this.keyGroup.children.entries()) {
       key.position.x = tempPosition.x + index * (this.keySizeX + 6);
       key.position.y = tempPosition.y - 10;
@@ -140,7 +138,7 @@ controls_world.dampingFactor = 0.05;
 controls_world.enableZoom = true;
 controls_world.update();
 
-controls_world.target.set(0,0,40);
+controls_world.target.set(0, 0, 40);
 const pointMap = {};
 const w = 1,
   h = 1;
@@ -220,7 +218,7 @@ function onResults(results) {
       pos_ps_chin.y,
       pos_ps_chin.z
     ).unproject(camera1);
-    pos_ws_chin.z = -pos_chin.z * x_scale + camera1.position.z - camera1.near; //Newly compute Z
+    pos_ws_chin.z = -pos_chin.z * x_scale + camera1.position.z - camera1.near; // Newly compute Z
     pos_ws_chin = ProjScale(pos_ws_chin, camera1.position, camera1.near, 100.0);
     testPiano.updatePosition(pos_ws_chin);
   }
@@ -269,7 +267,7 @@ function onResults(results) {
           camera1
         );
 
-        pos_ws.z = -pos_ns.z * x_scale + camera1.position.z - camera1.near; //Newly compute Z
+        pos_ws.z = -pos_ns.z * x_scale + camera1.position.z - camera1.near; // Newly compute Z
 
         pos_ws = ProjScale(pos_ws, camera1.position, camera1.near, 100.0);
         positions[3 * (i / 4 - 2) + 0] = pos_ws.x;
@@ -342,7 +340,11 @@ function onResults(results) {
   }
   controls_world.update();
   FarPlane_mesh.material.map = texture_frame;
+  if (lefthand_point_mesh) lefthand_point_mesh.visible = false;
+  if (righthand_point_mesh) righthand_point_mesh.visible = false;
   renderer.render(scene, camera1);
+  if (lefthand_point_mesh) lefthand_point_mesh.visible = true;
+  if (righthand_point_mesh) righthand_point_mesh.visible = true;
   renderer_world.render(scene, camera_world);
   canvasCtx.restore();
 }
