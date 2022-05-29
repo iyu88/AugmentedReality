@@ -4,12 +4,11 @@ import { OrbitControls } from "./node_modules/three/examples/jsm/controls/OrbitC
 class Piano {
   constructor() {
     this.keyGroup = new THREE.Group();
-    this.pianoPosition = new THREE.Vector3(0, 0, 20);
+    this.pianoPosition = new THREE.Vector3(-50, -10, 0);
     this.keySizeX = 10;
     this.keySizeY = 5;
     this.keySizeZ = 30;
-    this.keyNumber = 3;
-    // this.isPressed = false;
+    this.keyNumber = 10;
     for (let i = 0; i < this.keyNumber; i++) {
       const piano_geometry = new THREE.BoxGeometry(
         this.keySizeX,
@@ -20,14 +19,14 @@ class Piano {
       let piano_mesh = new THREE.Mesh(piano_geometry, piano_material);
       piano_mesh.position.x = this.pianoPosition.x + i * 11;
       piano_mesh.position.z = this.pianoPosition.z;
+      piano_mesh.rotation.x = Math.PI / 8;
       piano_mesh.geometry.attributes.position.needsUpdate = true;
       piano_mesh.geometry.computeBoundingBox();
       piano_mesh.geometry.boundingBox.needsUpdate = true;
       piano_mesh.isPressed = false;
       piano_mesh.finger = null;
-      // piano_mesh.isPlaying = false;
-      piano_mesh.audioSrc = new Audio(`./sounds/${i}.mp3`);
-      piano_mesh.audioSrc.loop = false;
+      // piano_mesh.audioSrc = new Audio(`./sounds/${i}.mp3`);
+      // piano_mesh.audioSrc.loop = false;
       console.log(piano_mesh);
       this.keyGroup.add(piano_mesh);
     }
@@ -36,27 +35,41 @@ class Piano {
   getPianoGroup() {
     return this.keyGroup;
   }
-  detectCollision(testmesh) {
-    const array = testmesh.geometry.attributes.position.array;
-    const arraylength = array.length / 3;
+  detectCollision(firstMesh, secondMesh) {
+    let presentMesh;
+    if (firstMesh && secondMesh) {
+      presentMesh = [
+        ...firstMesh.geometry.attributes.position.array,
+        ...secondMesh.geometry.attributes.position.array,
+      ];
+    } else {
+      presentMesh = firstMesh
+        ? [...firstMesh.geometry.attributes.position.array]
+        : [...secondMesh.geometry.attributes.position.array];
+    }
+    const arraylength = presentMesh.length / 3;
     for (const [index, key] of this.keyGroup.children.entries()) {
-      console.log(key.finger);
       const BB = new THREE.Box3();
       BB.setFromObject(key);
-      for (let i = 0; i < arraylength; i += 4) {
+      for (let i = 0; i < arraylength; i++) {
         if (
           BB.containsPoint(
-            new THREE.Vector3(array[3 * i], array[3 * i + 1], array[3 * i + 2])
+            new THREE.Vector3(
+              presentMesh[3 * i],
+              presentMesh[3 * i + 1],
+              presentMesh[3 * i + 2]
+            )
           )
         ) {
           if (
             key.isPressed === false &&
-            key.audioSrc.paused &&
+            // key.audioSrc.paused &&
             key.finger !== i
           ) {
             console.log("contain--------------" + index + i);
             key.material.color.set(0xff0000);
-            key.audioSrc.play();
+            // key.audioSrc.play();
+            this.playSound(index);
             key.isPressed = true;
             key.finger = i;
           }
@@ -65,6 +78,7 @@ class Piano {
             console.log("--------------contain" + index + i);
             key.material.color.set(0xffffff);
             key.isPressed = false;
+            key.finger = null;
             // key.audioSrc.pause();
           }
         }
@@ -73,20 +87,22 @@ class Piano {
   }
   updatePosition(chin) {
     // set piano in the position of face chin
-    console.log(chin);
-    this.pianoPosition = new THREE.Vector3(chin.x, chin.y, chin.z);
+    let tempPosition = new THREE.Vector3()
+      .copy(this.pianoPosition)
+      .add(new THREE.Vector3(chin.x, chin.y, chin.z));
+    // let tempPosition = new THREE.Vector3(chin.x, chin.y, chin.z)
     for (const [index, key] of this.keyGroup.children.entries()) {
-      key.position.x = this.pianoPosition.x + index * (this.keySizeX + 1);
-      key.position.y = this.pianoPosition.y - 10;
-      key.position.z = this.pianoPosition.z;
+      key.position.x = tempPosition.x + index * (this.keySizeX + 1);
+      key.position.y = tempPosition.y - 10;
+      key.position.z = tempPosition.z;
       key.geometry.attributes.position.needsUpdate = true;
     }
   }
-  // playSound = (index) => {
-  //   let audio = new Audio(`./sounds/${index}.mp3`);
-  //   audio.loop = false;
-  //   audio.play();
-  // };
+  playSound(index) {
+    let audio = new Audio(`./sounds/${index}.mp3`);
+    audio.loop = false;
+    audio.play();
+  }
 }
 
 const videoElement = document.getElementsByClassName("input_video")[0];
@@ -217,9 +233,6 @@ function onResults(results) {
   }
 
   if (results.leftHandLandmarks) {
-    // console.log("왼손 발견");
-    //console.log(testPiano.keyGroup.children[0].position);
-    //let num_lefthand_point = 21;
     if (lefthand_point_mesh == null) {
       let lefthand_point_geo = new THREE.BufferGeometry();
       const lefthand_vertices = [];
@@ -238,11 +251,9 @@ function onResults(results) {
             pos_ps.z
           ).unproject(camera1);
           lefthand_vertices.push(pos_ws.x, pos_ws.y, pos_ws.z);
-        } else {
-          lefthand_vertices.push(0, 0, 101);
         }
       }
-      const point_mat = new THREE.PointsMaterial({ color: 0xff0000, size: 7 });
+      const point_mat = new THREE.PointsMaterial({ color: 0x0000ff, size: 7 });
       const lefthand_geo_bufferattribute = new THREE.Float32BufferAttribute(
         lefthand_vertices,
         3
@@ -268,12 +279,11 @@ function onResults(results) {
         pos_ws.z = -pos_ns.z * x_scale + camera1.position.z - camera1.near; //Newly compute Z
 
         pos_ws = ProjScale(pos_ws, camera1.position, camera1.near, 100.0);
-        positions[3 * i + 0] = pos_ws.x;
-        positions[3 * i + 1] = pos_ws.y;
-        positions[3 * i + 2] = pos_ws.z;
+        positions[3 * (i / 4 - 1) + 0] = pos_ws.x;
+        positions[3 * (i / 4 - 1) + 1] = pos_ws.y;
+        positions[3 * (i / 4 - 1) + 2] = pos_ws.z;
       }
     }
-    testPiano.detectCollision(lefthand_point_mesh);
     lefthand_point_mesh.geometry.attributes.position.needsUpdate = true;
   }
 
@@ -296,8 +306,6 @@ function onResults(results) {
             pos_ps.z
           ).unproject(camera1);
           righthand_vertices.push(pos_ws.x, pos_ws.y, pos_ws.z);
-        } else {
-          righthand_vertices.push(0, 0, 101);
         }
       }
       const point_mat = new THREE.PointsMaterial({ color: 0x00ff00, size: 7 });
@@ -328,15 +336,17 @@ function onResults(results) {
         pos_ws.z = -pos_ns.z * x_scale + camera1.position.z - camera1.near; //Newly compute Z
 
         pos_ws = ProjScale(pos_ws, camera1.position, camera1.near, 100.0);
-        positions[3 * i + 0] = pos_ws.x;
-        positions[3 * i + 1] = pos_ws.y;
-        positions[3 * i + 2] = pos_ws.z;
+        positions[3 * (i / 4 - 1) + 0] = pos_ws.x;
+        positions[3 * (i / 4 - 1) + 1] = pos_ws.y;
+        positions[3 * (i / 4 - 1) + 2] = pos_ws.z;
       }
     }
-    testPiano.detectCollision(righthand_point_mesh);
     righthand_point_mesh.geometry.attributes.position.needsUpdate = true;
   }
 
+  if (lefthand_point_mesh || righthand_point_mesh) {
+    testPiano.detectCollision(lefthand_point_mesh, righthand_point_mesh);
+  }
   controls_world.update();
   FarPlane_mesh.material.map = texture_frame;
   renderer.render(scene, camera1);
