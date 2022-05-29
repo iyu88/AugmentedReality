@@ -61,14 +61,25 @@ class Piano {
             key.finger = i;
           }
         } else {
-          key.material.color.set(0xffffff);
           if (key.isPressed === true && key.finger === i) {
             console.log("--------------contain" + index + i);
+            key.material.color.set(0xffffff);
             key.isPressed = false;
             // key.audioSrc.pause();
           }
         }
       }
+    }
+  }
+  updatePosition(chin) {
+    // set piano in the position of face chin
+    console.log(chin);
+    this.pianoPosition = new THREE.Vector3(chin.x, chin.y, chin.z);
+    for (const [index, key] of this.keyGroup.children.entries()) {
+      key.position.x = this.pianoPosition.x + index * (this.keySizeX + 1);
+      key.position.y = this.pianoPosition.y - 10;
+      key.position.z = this.pianoPosition.z;
+      key.geometry.attributes.position.needsUpdate = true;
     }
   }
   // playSound = (index) => {
@@ -187,6 +198,24 @@ function onResults(results) {
   let texture_frame = new THREE.CanvasTexture(results.image);
   texture_frame.center = new THREE.Vector2(0.5, 0.5);
   texture_frame.rotation = Math.PI;
+
+  if (results.faceLandmarks) {
+    const pos_chin = results.faceLandmarks[152];
+    const pos_ps_chin = new THREE.Vector3(
+      (pos_chin.x - 0.5) * 2,
+      -(pos_chin.y - 0.5) * 2,
+      -1
+    );
+    let pos_ws_chin = new THREE.Vector3(
+      pos_ps_chin.x,
+      pos_ps_chin.y,
+      pos_ps_chin.z
+    ).unproject(camera1);
+    pos_ws_chin.z = -pos_chin.z * x_scale + camera1.position.z - camera1.near; //Newly compute Z
+    pos_ws_chin = ProjScale(pos_ws_chin, camera1.position, camera1.near, 100.0);
+    testPiano.updatePosition(pos_ws_chin);
+  }
+
   if (results.leftHandLandmarks) {
     // console.log("왼손 발견");
     //console.log(testPiano.keyGroup.children[0].position);
@@ -210,7 +239,7 @@ function onResults(results) {
           ).unproject(camera1);
           lefthand_vertices.push(pos_ws.x, pos_ws.y, pos_ws.z);
         } else {
-          lefthand_vertices.push(0, 0, 0);
+          lefthand_vertices.push(0, 0, 101);
         }
       }
       const point_mat = new THREE.PointsMaterial({ color: 0xff0000, size: 7 });
@@ -242,10 +271,6 @@ function onResults(results) {
         positions[3 * i + 0] = pos_ws.x;
         positions[3 * i + 1] = pos_ws.y;
         positions[3 * i + 2] = pos_ws.z;
-      } else {
-        positions[3 * i + 0] = 0;
-        positions[3 * i + 1] = 0;
-        positions[3 * i + 2] = 0;
       }
     }
     testPiano.detectCollision(lefthand_point_mesh);
@@ -272,10 +297,10 @@ function onResults(results) {
           ).unproject(camera1);
           righthand_vertices.push(pos_ws.x, pos_ws.y, pos_ws.z);
         } else {
-          righthand_vertices.push(0, 0, 0);
+          righthand_vertices.push(0, 0, 101);
         }
       }
-      const point_mat = new THREE.PointsMaterial({ color: 0xff0000, size: 7 });
+      const point_mat = new THREE.PointsMaterial({ color: 0x00ff00, size: 7 });
       const righthand_geo_bufferattribute = new THREE.Float32BufferAttribute(
         righthand_vertices,
         3
@@ -306,10 +331,6 @@ function onResults(results) {
         positions[3 * i + 0] = pos_ws.x;
         positions[3 * i + 1] = pos_ws.y;
         positions[3 * i + 2] = pos_ws.z;
-      } else {
-        positions[3 * i + 0] = 0;
-        positions[3 * i + 1] = 0;
-        positions[3 * i + 2] = 0;
       }
     }
     testPiano.detectCollision(righthand_point_mesh);
