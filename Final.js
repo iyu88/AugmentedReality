@@ -437,8 +437,8 @@ function onResults2(results) {
     // -> 거리는 랜드마크에서 벡터로 구한 것과는 다름 : 수식에서 오프셋과 벡터는 같기 때문에 방향은 정규화된 방향을 사용할 수 있음
     let jointLeftShoulder = pos_3d_landmarks["left_shoulder"]; // p0 -> 부모
     let jointLeftElbow = pos_3d_landmarks["left_elbow"]; // p1 -> 자식
-    let boneLeftArm = skeleton.getBoneByName("BoyLeftArm"); // j1
-
+    let boneLeftArm = skeleton.getBoneByName("BoyLeftForeArm"); // j1
+    
     let v01 = new THREE.Vector3()
       .subVectors(jointLeftElbow, jointLeftShoulder) // 0 에서 1 을 뺀다 ( 순서는 1 다음 0 )
       .normalize(); // 정규화하여 유닛 벡터를 구함
@@ -453,7 +453,7 @@ function onResults2(results) {
 
     // 하위 부분 움직이도록 만들기
     let jointLeftWrist = pos_3d_landmarks["left_wrist"]; // p2
-    let boneLeftForeArm = skeleton.getBoneByName("BoyLeftForeArm"); // j2
+    let boneLeftForeArm = skeleton.getBoneByName("BoyLeftHand"); // j2
     let v12 = new THREE.Vector3()
       .subVectors(jointLeftWrist, jointLeftElbow) // (벡터 2, 벡터 1);
       .normalize();
