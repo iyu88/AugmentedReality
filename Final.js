@@ -239,7 +239,7 @@ pose_points.geometry.setAttribute(
 );
 scene.add(pose_points);
 
-const lefthand_points = new THREE.Points(
+const hand_points = new THREE.Points(
   new THREE.BufferGeometry(),
   new THREE.PointsMaterial({
     color: 0xff0000,
@@ -248,26 +248,26 @@ const lefthand_points = new THREE.Points(
   })
 );
 
-lefthand_points.geometry.setAttribute(
+hand_points.geometry.setAttribute(
   "position",
-  new THREE.BufferAttribute(new Float32Array(33 * 3), 3)
+  new THREE.BufferAttribute(new Float32Array(42 * 3), 3)
 );
-scene.add(lefthand_points);
+scene.add(hand_points);
 
-const righthand_points = new THREE.Points(
-  new THREE.BufferGeometry(),
-  new THREE.PointsMaterial({
-    color: 0xff0000,
-    size: 0.1,
-    sizeAttenuation: true,
-  })
-);
-
-righthand_points.geometry.setAttribute(
-  "position",
-  new THREE.BufferAttribute(new Float32Array(33 * 3), 3)
-);
-scene.add(righthand_points);
+// const righthand_points = new THREE.Points(
+//   new THREE.BufferGeometry(),
+//   new THREE.PointsMaterial({
+//     color: 0xff0000,
+//     size: 0.1,
+//     sizeAttenuation: true,
+//   })
+// );
+// 
+// righthand_points.geometry.setAttribute(
+//   "position",
+//   new THREE.BufferAttribute(new Float32Array(33 * 3), 3)
+// );
+// scene.add(righthand_points);
 
 function computeR(A, B) {
   // get unit vectors
@@ -488,12 +488,12 @@ function onResults2(results) {
 
     let i = 0;
     for (const [key, value] of Object.entries(lefthand_3d_landmarks)) {
-      lefthand_points.geometry.attributes.position.array[3 * i + 0] = value.x;
-      lefthand_points.geometry.attributes.position.array[3 * i + 1] = value.y;
-      lefthand_points.geometry.attributes.position.array[3 * i + 2] = value.z;
+      hand_points.geometry.attributes.position.array[3 * i + 0] = value.x;
+      hand_points.geometry.attributes.position.array[3 * i + 1] = value.y;
+      hand_points.geometry.attributes.position.array[3 * i + 2] = value.z;
       i++;
     }
-    lefthand_points.geometry.attributes.position.needsUpdate = true;
+    //lefthand_points.geometry.attributes.position.needsUpdate = true;
   }
 
   {
@@ -511,14 +511,14 @@ function onResults2(results) {
       righthand_landmarks_dict
     );
 
-    let i = 0;
+    let i = 21;
     for (const [key, value] of Object.entries(righthand_3d_landmarks)) {
-      righthand_points.geometry.attributes.position.array[3 * i + 0] = value.x;
-      righthand_points.geometry.attributes.position.array[3 * i + 1] = value.y;
-      righthand_points.geometry.attributes.position.array[3 * i + 2] = value.z;
+      hand_points.geometry.attributes.position.array[3 * i + 0] = value.x;
+      hand_points.geometry.attributes.position.array[3 * i + 1] = value.y;
+      hand_points.geometry.attributes.position.array[3 * i + 2] = value.z;
       i++;
     }
-    righthand_points.geometry.attributes.position.needsUpdate = true;
+    hand_points.geometry.attributes.position.needsUpdate = true;
   }
 
   renderer.render(scene, camera_ar);
