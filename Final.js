@@ -319,13 +319,11 @@ function computeR(A, B) {
 }
 
 function onResults2(results) {
-  if (
-    !results.poseLandmarks ||
-    !results.leftHandLandmarks ||
-    !results.rightHandLandmarks
-  ) {
-    return;
-  }
+  // if (
+  //   !results.poseLandmarks
+  // ) {
+  //   return;
+  // }
 
   canvasCtx.save();
   canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
@@ -398,7 +396,7 @@ function onResults2(results) {
 
     return pose3dDict;
   }
-
+  if(results.poseLandmarks)
   {
     let pose_landmarks_dict = {};
     results.poseLandmarks.forEach((landmark, i) => {
@@ -468,7 +466,7 @@ function onResults2(results) {
     // 갈라지는 곳에서는 두 개의 Rotation Matrix 가 나올 수 있고, Rotation 의 Interpolation 을 위해서 Quaternion 사용
     // 랜드마크 + 홀리스틱 ( 손가락 관절 ) + IK Solver ( 바닥에 붙이기 - 타켓 포지션에 적용 ) + Physics ( Skin Mesh 에 대해서 충돌 피직스 설정 - 충돌 일어나지 않도록 )
   }
-
+  if(results.leftHandLandmarks)
   {
     //hand pose update to world
 
@@ -495,7 +493,7 @@ function onResults2(results) {
     }
     //lefthand_points.geometry.attributes.position.needsUpdate = true;
   }
-
+  if(results.rightHandLandmarks)
   {
     let righthand_landmarks_dict = {};
     results.rightHandLandmarks.forEach((landmark, i) => {
