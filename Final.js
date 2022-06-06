@@ -233,11 +233,26 @@ const pose_points = new THREE.Points(
   })
 );
 
+const custom_points = new THREE.Points(
+  new THREE.BufferGeometry(),
+  new THREE.PointsMaterial({
+    color: 0x0000ff,
+    size: 0.1,
+    sizeAttenuation: true,
+  })
+);
+
 pose_points.geometry.setAttribute(
   "position",
   new THREE.BufferAttribute(new Float32Array(33 * 3), 3)
 );
 scene.add(pose_points);
+
+custom_points.geometry.setAttribute(
+  "position",
+  new THREE.BufferAttribute(new Float32Array(10 * 3), 3)
+);
+scene.add(custom_points);
 
 const hand_points = new THREE.Points(
   new THREE.BufferGeometry(),
@@ -262,7 +277,7 @@ scene.add(hand_points);
 //     sizeAttenuation: true,
 //   })
 // );
-// 
+//
 // righthand_points.geometry.setAttribute(
 //   "position",
 //   new THREE.BufferAttribute(new Float32Array(33 * 3), 3)
@@ -396,8 +411,7 @@ function onResults2(results) {
 
     return pose3dDict;
   }
-  if(results.poseLandmarks)
-  {
+  if (results.poseLandmarks) {
     let pose_landmarks_dict = {};
     results.poseLandmarks.forEach((landmark, i) => {
       //console.log(i, landmark);
@@ -412,7 +426,6 @@ function onResults2(results) {
       new THREE.Vector3(1, 0, -1.5),
       pose_landmarks_dict
     );
-    //console.log(pos_3d_landmarks["left_heel"]);
 
     let i = 0;
     for (const [key, value] of Object.entries(pos_3d_landmarks)) {
@@ -422,6 +435,42 @@ function onResults2(results) {
       i++;
     }
     pose_points.geometry.attributes.position.needsUpdate = true;
+
+    /* Custom Pos 3d Landmarks */
+    let custom_pos_3d_landmarks = {};
+    custom_pos_3d_landmarks["$hip"] = new THREE.Vector3()
+      .addVectors(
+        pos_3d_landmarks["left_hip"].clone(),
+        pos_3d_landmarks["right_hip"].clone()
+      )
+      .multiplyScalar(0.5);
+
+    custom_pos_3d_landmarks["$neck"] = new THREE.Vector3()
+      .addVectors(
+        pos_3d_landmarks["left_shoulder"].clone(),
+        pos_3d_landmarks["right_shoulder"].clone()
+      )
+      .multiplyScalar(0.5);
+
+    console.log(custom_pos_3d_landmarks["$neck"]);
+
+    custom_pos_3d_landmarks["$spine1"] = new THREE.Vector3()
+      .addVectors(
+        custom_pos_3d_landmarks["$hip"].clone().multiplyScalar(4),
+        custom_pos_3d_landmarks["$neck"].clone().multiplyScalar(1)
+      )
+      .multiplyScalar(0.2);
+
+    console.log(custom_pos_3d_landmarks["$spine1"]);
+
+    i = 0;
+    for (const [key, value] of Object.entries(custom_pos_3d_landmarks)) {
+      custom_points.geometry.attributes.position.array[3 * i + 0] = value.x;
+      custom_points.geometry.attributes.position.array[3 * i + 1] = value.y;
+      custom_points.geometry.attributes.position.array[3 * i + 2] = value.z;
+      i++;
+    }
+    custom_points.geometry.attributes.position.needsUpdate = true;
 
     // rigging //
     // mixamorigLeftArm : left_shoulder
@@ -437,37 +486,38 @@ function onResults2(results) {
     // -> 거리는 랜드마크에서 벡터로 구한 것과는 다름 : 수식에서 오프셋과 벡터는 같기 때문에 방향은 정규화된 방향을 사용할 수 있음
     let jointLeftShoulder = pos_3d_landmarks["left_shoulder"]; // p0 -> 부모
     let jointLeftElbow = pos_3d_landmarks["left_elbow"]; // p1 -> 자식
-    let boneLeftArm = skeleton.getBoneByName("BoyLeftForeArm"); // j1
-    
+    let boneLeftForeArm = skeleton.getBoneByName("BoyLeftForeArm"); // j1
+
     let v01 = new THREE.Vector3()
       .subVectors(jointLeftElbow, jointLeftShoulder) // 0 에서 1 을 뺀다 ( 순서는 1 다음 0 )
       .normalize(); // 정규화하여 유닛 벡터를 구함
-    let j1 = boneLeftArm.position.clone().normalize(); // 팔꿈치 위치 정규화
+    let j1 = boneLeftForeArm.position.clone().normalize(); // 팔꿈치 위치 정규화
     // j1 을 v01 로 가져감 ( Rotation 을 구하는 함수는 정의되어 있음 - computeR )
     let R0 = computeR(j1, v01); // LeftArm 의 Rotation Vector 를 구할 수 있음 ( 앞의 녀석을 뒤의 녀석으로 만들어주는 매트릭스를 계산 )
     // 로컬 트랜스폼을 변경해줌
-    boneLeftArm.setRotationFromMatrix(R0); // Matrix4 로 설정
+    skeleton.getBoneByName("BoyLeftArm").setRotationFromMatrix(R0); // Matrix4 로 설정
 
     // 루트부터 싹 새롭게 설정하지 않았음 : 어깨의 상대적인 위치만 설정해주겠다 ( 어깨를 임시적인 루트로 정의하고 진행 )
     // => 실제로는 루트에서부터 차례대로 로컬 트랜스폼이 작동하도록 만들어야 함
 
     // 하위 부분 움직이도록 만들기
     let jointLeftWrist = pos_3d_landmarks["left_wrist"]; // p2
-    let boneLeftForeArm = skeleton.getBoneByName("BoyLeftHand"); // j2
+    let boneLeftHand = skeleton.getBoneByName("BoyLeftHand"); // j2
     let v12 = new THREE.Vector3()
       .subVectors(jointLeftWrist, jointLeftElbow) // (벡터 2, 벡터 1);
       .normalize();
-    let j2 = boneLeftForeArm.position.clone().normalize();
+    let j2 = boneLeftHand.position.clone().normalize();
     let Rv12 = v12.clone().applyMatrix4(R0.clone().transpose()); // R0 의 역행렬으로부터 -> transpose()
     let R1 = computeR(j2, Rv12);
-    boneLeftForeArm.setRotationFromMatrix(R1); // setRotationFromQuaternion() 사용 권장
+    skeleton.getBoneByName("BoyLeftForeArm").setRotationFromMatrix(R1); // setRotationFromQuaternion() 사용 권장
     // console.log(boneLeftArm);
+
+    // console.log(skeleton);
 
     // 갈라지는 곳에서는 두 개의 Rotation Matrix 가 나올 수 있고, Rotation 의 Interpolation 을 위해서 Quaternion 사용
     // 랜드마크 + 홀리스틱 ( 손가락 관절 ) + IK Solver ( 바닥에 붙이기 - 타켓 포지션에 적용 ) + Physics ( Skin Mesh 에 대해서 충돌 피직스 설정 - 충돌 일어나지 않도록 )
   }
-  if(results.leftHandLandmarks)
-  {
+  if (results.leftHandLandmarks) {
     //hand pose update to world
 
     let lefthand_landmarks_dict = {};
@@ -493,8 +543,7 @@ function onResults2(results) {
     }
     //lefthand_points.geometry.attributes.position.needsUpdate = true;
   }
-  if(results.rightHandLandmarks)
-  {
+  if (results.rightHandLandmarks) {
     let righthand_landmarks_dict = {};
     results.rightHandLandmarks.forEach((landmark, i) => {
       //console.log(i, landmark);
