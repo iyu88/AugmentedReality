@@ -375,6 +375,8 @@ function onResults2(results) {
     // 루트부터 싹 새롭게 설정하지 않았음 : 어깨의 상대적인 위치만 설정해주겠다 ( 어깨를 임시적인 루트로 정의하고 진행 )
     // => 실제로는 루트에서부터 차례대로 로컬 트랜스폼이 작동하도록 만들어야 함
 
+    let boneHips = skeleton.getBoneByName("mixamorigHips"); // j1
+    console.log(boneHips);
     // 하위 부분 움직이도록 만들기
     let jointLeftWrist = pos_3d_landmarks["left_wrist"]; // p2
     let boneLeftForeArm = skeleton.getBoneByName("mixamorigLeftForeArm"); // j2
