@@ -360,6 +360,8 @@ function onResults2(results) {
     // joint 는 미디어파이프 상, bone 은 threejs 상
     // joint 사이의 거리와 bone 사이의 거리는 다름 : 각도를 갖고 위치를 설정할 것이므로 방향 자체는 랜드마크의 벡터로 가져올 수 있음
     // -> 거리는 랜드마크에서 벡터로 구한 것과는 다름 : 수식에서 오프셋과 벡터는 같기 때문에 방향은 정규화된 방향을 사용할 수 있음
+
+
     let jointLeftShoulder = pos_3d_landmarks["left_shoulder"]; // p0 -> 부모
     let jointLeftElbow = pos_3d_landmarks["left_elbow"]; // p1 -> 자식
     let boneLeftArm = skeleton.getBoneByName("mixamorigLeftArm"); // j1
@@ -372,22 +374,8 @@ function onResults2(results) {
     // 로컬 트랜스폼을 변경해줌
     boneLeftArm.setRotationFromMatrix(R0); // Matrix4 로 설정
 
-    // 루트부터 싹 새롭게 설정하지 않았음 : 어깨의 상대적인 위치만 설정해주겠다 ( 어깨를 임시적인 루트로 정의하고 진행 )
-    // => 실제로는 루트에서부터 차례대로 로컬 트랜스폼이 작동하도록 만들어야 함
+    
 
-    let boneHips = skeleton.getBoneByName("mixamorigHips"); // j1
-    console.log(boneHips);
-    // 하위 부분 움직이도록 만들기
-    let jointLeftWrist = pos_3d_landmarks["left_wrist"]; // p2
-    let boneLeftForeArm = skeleton.getBoneByName("mixamorigLeftForeArm"); // j2
-    let v12 = new THREE.Vector3()
-      .subVectors(jointLeftWrist, jointLeftElbow) // (벡터 2, 벡터 1);
-      .normalize();
-    let j2 = boneLeftForeArm.position.clone().normalize();
-    let Rv12 = v12.clone().applyMatrix4(R0.clone().transpose()); // R0 의 역행렬으로부터 -> transpose()
-    let R1 = computeR(j2, Rv12);
-    boneLeftForeArm.setRotationFromMatrix(R1); // setRotationFromQuaternion() 사용 권장
-    // console.log(boneLeftArm);
 
     // 갈라지는 곳에서는 두 개의 Rotation Matrix 가 나올 수 있고, Rotation 의 Interpolation 을 위해서 Quaternion 사용
     // 랜드마크 + 홀리스틱 ( 손가락 관절 ) + IK Solver ( 바닥에 붙이기 - 타켓 포지션에 적용 ) + Physics ( Skin Mesh 에 대해서 충돌 피직스 설정 - 충돌 일어나지 않도록 )
@@ -399,7 +387,7 @@ function onResults2(results) {
 
 const pose = new Pose({
   locateFile: (file) => {
-    return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+    return `../node_modules/@mediapipe/pose/${file}`;
   },
 });
 
