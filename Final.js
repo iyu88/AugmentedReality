@@ -438,7 +438,7 @@ function onResults2(results) {
 
     /* Custom Pos 3d Landmarks */
     let custom_pos_3d_landmarks = {};
-    custom_pos_3d_landmarks["$hip"] = new THREE.Vector3()
+    custom_pos_3d_landmarks["$center_hip"] = new THREE.Vector3()
       .addVectors(
         pos_3d_landmarks["left_hip"].clone(),
         pos_3d_landmarks["right_hip"].clone()
@@ -454,79 +454,69 @@ function onResults2(results) {
 
     custom_pos_3d_landmarks["$spine1"] = new THREE.Vector3()
       .addVectors(
-        custom_pos_3d_landmarks["$hip"].clone().multiplyScalar(4),
+        custom_pos_3d_landmarks["$center_hip"].clone().multiplyScalar(4),
         custom_pos_3d_landmarks["$neck"].clone().multiplyScalar(1)
       )
       .multiplyScalar(0.2);
 
-      custom_pos_3d_landmarks["$spine2"] = new THREE.Vector3()
+    custom_pos_3d_landmarks["$spine2"] = new THREE.Vector3()
       .addVectors(
-        custom_pos_3d_landmarks["$hip"].clone().multiplyScalar(2),
+        custom_pos_3d_landmarks["$center_hip"].clone().multiplyScalar(2),
         custom_pos_3d_landmarks["$neck"].clone().multiplyScalar(3)
       )
       .multiplyScalar(0.2);
 
-      custom_pos_3d_landmarks["$spine3"] = new THREE.Vector3()
+    custom_pos_3d_landmarks["$spine3"] = new THREE.Vector3()
       .addVectors(
-        custom_pos_3d_landmarks["$hip"].clone().multiplyScalar(3),
+        custom_pos_3d_landmarks["$center_hip"].clone().multiplyScalar(3),
         custom_pos_3d_landmarks["$neck"].clone().multiplyScalar(2)
       )
       .multiplyScalar(0.2);
 
-      custom_pos_3d_landmarks["$spine4"] = new THREE.Vector3()
+    custom_pos_3d_landmarks["$spine4"] = new THREE.Vector3()
       .addVectors(
-        custom_pos_3d_landmarks["$hip"].clone().multiplyScalar(1),
+        custom_pos_3d_landmarks["$center_hip"].clone().multiplyScalar(1),
         custom_pos_3d_landmarks["$neck"].clone().multiplyScalar(4)
       )
       .multiplyScalar(0.2);
 
-      custom_pos_3d_landmarks["$left_inner_shoulder"] = new THREE.Vector3()
+    custom_pos_3d_landmarks["$left_inner_shoulder"] = new THREE.Vector3()
       .addVectors(
         pos_3d_landmarks["left_shoulder"].clone().multiplyScalar(1),
         pos_3d_landmarks["right_shoulder"].clone().multiplyScalar(2)
       )
-      .multiplyScalar(1/3);
+      .multiplyScalar(1 / 3);
 
-      custom_pos_3d_landmarks["$right_inner_shoulder"] = new THREE.Vector3()
+    custom_pos_3d_landmarks["$right_inner_shoulder"] = new THREE.Vector3()
       .addVectors(
         pos_3d_landmarks["left_shoulder"].clone().multiplyScalar(2),
         pos_3d_landmarks["right_shoulder"].clone().multiplyScalar(1)
       )
-      .multiplyScalar(1/3);
+      .multiplyScalar(1 / 3);
 
-      custom_pos_3d_landmarks["$neck1"] = new THREE.Vector3(0,0,0)
-      .add(
-        pos_3d_landmarks["left_shoulder"].clone().multiplyScalar(4)
-      ).add(
-        pos_3d_landmarks["right_shoulder"].clone().multiplyScalar(4)
-      ).add(
-        pos_3d_landmarks["left_ear"].clone()
-      ).add(
-        pos_3d_landmarks["right_ear"].clone()
-      )
-      .multiplyScalar(1/10);
+    custom_pos_3d_landmarks["$neck1"] = new THREE.Vector3(0, 0, 0)
+      .add(pos_3d_landmarks["left_shoulder"].clone().multiplyScalar(4))
+      .add(pos_3d_landmarks["right_shoulder"].clone().multiplyScalar(4))
+      .add(pos_3d_landmarks["left_ear"].clone())
+      .add(pos_3d_landmarks["right_ear"].clone())
+      .multiplyScalar(1 / 10);
 
-      custom_pos_3d_landmarks["$neck2"] = new THREE.Vector3(0,0,0)
-      .add(
-        pos_3d_landmarks["left_shoulder"].clone()
-      ).add(
-        pos_3d_landmarks["right_shoulder"].clone()
-      ).add(
-        pos_3d_landmarks["left_ear"].clone()
-      ).add(
-        pos_3d_landmarks["right_ear"].clone()
-      )
-      .multiplyScalar(1/4);
+    custom_pos_3d_landmarks["$neck2"] = new THREE.Vector3(0, 0, 0)
+      .add(pos_3d_landmarks["left_shoulder"].clone())
+      .add(pos_3d_landmarks["right_shoulder"].clone())
+      .add(pos_3d_landmarks["left_ear"].clone())
+      .add(pos_3d_landmarks["right_ear"].clone())
+      .multiplyScalar(1 / 4);
 
-      custom_pos_3d_landmarks["$right_inner_shoulder"] = new THREE.Vector3()
+    custom_pos_3d_landmarks["$right_inner_shoulder"] = new THREE.Vector3()
       .addVectors(
         pos_3d_landmarks["left_shoulder"].clone().multiplyScalar(2),
         pos_3d_landmarks["right_shoulder"].clone().multiplyScalar(1)
       )
-      .multiplyScalar(1/3);
+      .multiplyScalar(1 / 3);
 
-      delete custom_pos_3d_landmarks["$hip"];
-      delete custom_pos_3d_landmarks["$neck"];
+    delete custom_pos_3d_landmarks["$center_hip"];
+    delete custom_pos_3d_landmarks["$neck"];
     i = 0;
     for (const [key, value] of Object.entries(custom_pos_3d_landmarks)) {
       custom_points.geometry.attributes.position.array[3 * i + 0] = value.x;
@@ -552,7 +542,6 @@ function onResults2(results) {
     let jointLeftElbow = pos_3d_landmarks["left_elbow"]; // p1 -> 자식
     let boneLeftForeArm = skeleton.getBoneByName("BoyLeftForeArm"); // j1
 
-
     // let v01 = new THREE.Vector3()
     //   .subVectors(jointLeftElbow, jointLeftShoulder) // 0 에서 1 을 뺀다 ( 순서는 1 다음 0 )
     //   .normalize(); // 정규화하여 유닛 벡터를 구함
@@ -568,7 +557,9 @@ function onResults2(results) {
     let boneHips = skeleton.getBoneByName("BoyHips");
     console.log(boneHips);
     //console.log("-----------------");
-    let v01 = new THREE.Vector3().subVectors(jointRightHip,jointSpine1).normalize();
+    let v01 = new THREE.Vector3()
+      .subVectors(jointRightHip, jointSpine1)
+      .normalize();
     let j1 = boneHips.position.clone().normalize();
     //console.log(j1);
     let R0 = computeR(j1, v01);
