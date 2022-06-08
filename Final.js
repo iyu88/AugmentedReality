@@ -902,7 +902,7 @@ function onResults2(results) {
     results.leftHandLandmarks.forEach((landmark, i) => {
       //console.log(i, landmark);
       //console.log(index_to_name[i]);
-      lefthand_landmarks_dict[hand_index_to_name[i]] = landmark;
+      lefthand_landmarks_dict[`LEFT_${hand_index_to_name[i]}`] = landmark;
     });
 
     let lefthand_3d_landmarks = update3dpose(
@@ -926,7 +926,7 @@ function onResults2(results) {
     results.rightHandLandmarks.forEach((landmark, i) => {
       //console.log(i, landmark);
       //console.log(index_to_name[i]);
-      righthand_landmarks_dict[hand_index_to_name[i]] = landmark;
+      righthand_landmarks_dict[`RIGHT_${hand_index_to_name[i]}`] = landmark;
     });
 
     let righthand_3d_landmarks = update3dpose(
