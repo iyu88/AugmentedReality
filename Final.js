@@ -555,12 +555,6 @@ function onResults2(results) {
     delete custom_pos_3d_landmarks["$center_hip"];
     delete custom_pos_3d_landmarks["$center_shoulder"];
 
-    total_pos_3d_landmarks = Object.assign(
-      {},
-      pos_3d_landmarks,
-      custom_pos_3d_landmarks
-    );
-
     i = 0;
     for (const [key, value] of Object.entries(custom_pos_3d_landmarks)) {
       custom_points.geometry.attributes.position.array[3 * i + 0] = value.x;
@@ -570,6 +564,66 @@ function onResults2(results) {
     }
     custom_points.geometry.attributes.position.needsUpdate = true;
 
+    let lefthand_3d_landmarks;
+    if (results.leftHandLandmarks) {
+      //hand pose update to world
+  
+      let lefthand_landmarks_dict = {};
+      results.leftHandLandmarks.forEach((landmark, i) => {
+        //console.log(i, landmark);
+        //console.log(index_to_name[i]);
+        lefthand_landmarks_dict[`LEFT_${hand_index_to_name[i]}`] = landmark;
+      });
+  
+      lefthand_3d_landmarks = update3dpose(
+        camera_world,
+        1.5,
+        new THREE.Vector3(1, 0, -1.5),
+        lefthand_landmarks_dict
+      );
+  
+      let i = 0;
+      for (const [key, value] of Object.entries(lefthand_3d_landmarks)) {
+        hand_points.geometry.attributes.position.array[3 * i + 0] = value.x;
+        hand_points.geometry.attributes.position.array[3 * i + 1] = value.y;
+        hand_points.geometry.attributes.position.array[3 * i + 2] = value.z;
+        i++;
+      }
+      //lefthand_points.geometry.attributes.position.needsUpdate = true;
+    }
+    let righthand_3d_landmarks;
+    if (results.rightHandLandmarks) {
+      let righthand_landmarks_dict = {};
+      results.rightHandLandmarks.forEach((landmark, i) => {
+        //console.log(i, landmark);
+        //console.log(index_to_name[i]);
+        righthand_landmarks_dict[`RIGHT_${hand_index_to_name[i]}`] = landmark;
+      });
+  
+      righthand_3d_landmarks = update3dpose(
+        camera_world,
+        1.5,
+        new THREE.Vector3(1, 0, -1.5),
+        righthand_landmarks_dict
+      );
+  
+      let i = 21;
+      for (const [key, value] of Object.entries(righthand_3d_landmarks)) {
+        hand_points.geometry.attributes.position.array[3 * i + 0] = value.x;
+        hand_points.geometry.attributes.position.array[3 * i + 1] = value.y;
+        hand_points.geometry.attributes.position.array[3 * i + 2] = value.z;
+        i++;
+      }
+      hand_points.geometry.attributes.position.needsUpdate = true;
+    }
+
+    total_pos_3d_landmarks = Object.assign(
+      {},
+      pos_3d_landmarks,
+      custom_pos_3d_landmarks,
+      lefthand_3d_landmarks,
+      righthand_3d_landmarks
+    );
     // rigging //
     // mixamorigLeftArm : left_shoulder
     // mixamorigLeftForeArm : left_elbow
@@ -894,56 +948,6 @@ function onResults2(results) {
 
     // 갈라지는 곳에서는 두 개의 Rotation Matrix 가 나올 수 있고, Rotation 의 Interpolation 을 위해서 Quaternion 사용
     // 랜드마크 + 홀리스틱 ( 손가락 관절 ) + IK Solver ( 바닥에 붙이기 - 타켓 포지션에 적용 ) + Physics ( Skin Mesh 에 대해서 충돌 피직스 설정 - 충돌 일어나지 않도록 )
-  }
-  if (results.leftHandLandmarks) {
-    //hand pose update to world
-
-    let lefthand_landmarks_dict = {};
-    results.leftHandLandmarks.forEach((landmark, i) => {
-      //console.log(i, landmark);
-      //console.log(index_to_name[i]);
-      lefthand_landmarks_dict[`LEFT_${hand_index_to_name[i]}`] = landmark;
-    });
-
-    let lefthand_3d_landmarks = update3dpose(
-      camera_world,
-      1.5,
-      new THREE.Vector3(1, 0, -1.5),
-      lefthand_landmarks_dict
-    );
-
-    let i = 0;
-    for (const [key, value] of Object.entries(lefthand_3d_landmarks)) {
-      hand_points.geometry.attributes.position.array[3 * i + 0] = value.x;
-      hand_points.geometry.attributes.position.array[3 * i + 1] = value.y;
-      hand_points.geometry.attributes.position.array[3 * i + 2] = value.z;
-      i++;
-    }
-    //lefthand_points.geometry.attributes.position.needsUpdate = true;
-  }
-  if (results.rightHandLandmarks) {
-    let righthand_landmarks_dict = {};
-    results.rightHandLandmarks.forEach((landmark, i) => {
-      //console.log(i, landmark);
-      //console.log(index_to_name[i]);
-      righthand_landmarks_dict[`RIGHT_${hand_index_to_name[i]}`] = landmark;
-    });
-
-    let righthand_3d_landmarks = update3dpose(
-      camera_world,
-      1.5,
-      new THREE.Vector3(1, 0, -1.5),
-      righthand_landmarks_dict
-    );
-
-    let i = 21;
-    for (const [key, value] of Object.entries(righthand_3d_landmarks)) {
-      hand_points.geometry.attributes.position.array[3 * i + 0] = value.x;
-      hand_points.geometry.attributes.position.array[3 * i + 1] = value.y;
-      hand_points.geometry.attributes.position.array[3 * i + 2] = value.z;
-      i++;
-    }
-    hand_points.geometry.attributes.position.needsUpdate = true;
   }
 
   renderer.render(scene, camera_ar);
