@@ -2,6 +2,7 @@ import * as THREE from "./node_modules/three/build/three.module.js";
 import { OrbitControls } from "./node_modules/three/examples/jsm/controls/OrbitControls.js";
 import { GLTFLoader } from "./node_modules/three/examples/jsm/loaders/GLTFLoader.js";
 import { FBXLoader } from "./node_modules/three/examples/jsm/loaders/FBXLoader.js";
+import { Quaternion } from "three";
 
 // DOM 요소 가져오기
 const videoElement = document.getElementsByClassName("input_video")[0];
@@ -208,6 +209,9 @@ let hand_name_to_index = {
 
 let pose_index_to_name = {};
 let hand_index_to_name = {};
+let pos_3d_landmarks = {};
+let custom_pos_3d_landmarks = {};
+let total_pos_3d_landmarks;
 
 // Pose 의 이름에 대한 인덱스 저장
 for (const [key, value] of Object.entries(pose_name_to_index)) {
@@ -332,9 +336,7 @@ function computeR(A, B) {
   );
   return R;
 }
-let total_pos_3d_landmarks;
-let pos_3d_landmarks = {}
-let custom_pos_3d_landmarks = {};
+
 function computeR_hips() {
   const hip_joint = custom_pos_3d_landmarks["$hips"];
   let u = new THREE.Vector3()
@@ -347,10 +349,9 @@ function computeR_hips() {
   u = new THREE.Vector3().crossVectors(v, w).normalize();
   const R = new THREE.Matrix4().makeBasis(u, v, w); // local!!
   return R;
-};
+}
 
-
-function computeJointParentR (
+function computeJointParentR(
   nameSkeletonJoint,
   nameMpJoint,
   nameMpJointParent,
@@ -367,8 +368,7 @@ function computeJointParentR (
     .normalize();
   let R = computeR(j, v.applyMatrix4(R_chain.clone().transpose()));
   return R;
-};
-
+}
 
 function onResults2(results) {
   // if (
@@ -474,7 +474,7 @@ function onResults2(results) {
     pose_points.geometry.attributes.position.needsUpdate = true;
 
     /* Custom Pos 3d Landmarks */
-    
+
     custom_pos_3d_landmarks["$center_hip"] = new THREE.Vector3()
       .addVectors(
         pos_3d_landmarks["left_hip"].clone(),
@@ -482,7 +482,7 @@ function onResults2(results) {
       )
       .multiplyScalar(0.5);
 
-    custom_pos_3d_landmarks["$neck"] = new THREE.Vector3()
+    custom_pos_3d_landmarks["$center_shoulder"] = new THREE.Vector3()
       .addVectors(
         pos_3d_landmarks["left_shoulder"].clone(),
         pos_3d_landmarks["right_shoulder"].clone()
@@ -492,28 +492,28 @@ function onResults2(results) {
     custom_pos_3d_landmarks["$hips"] = new THREE.Vector3()
       .addVectors(
         custom_pos_3d_landmarks["$center_hip"].clone().multiplyScalar(4),
-        custom_pos_3d_landmarks["$neck"].clone().multiplyScalar(1)
+        custom_pos_3d_landmarks["$center_shoulder"].clone().multiplyScalar(1)
       )
       .multiplyScalar(0.2);
 
     custom_pos_3d_landmarks["$spine"] = new THREE.Vector3()
       .addVectors(
         custom_pos_3d_landmarks["$center_hip"].clone().multiplyScalar(2),
-        custom_pos_3d_landmarks["$neck"].clone().multiplyScalar(3)
+        custom_pos_3d_landmarks["$center_shoulder"].clone().multiplyScalar(3)
       )
       .multiplyScalar(0.2);
 
     custom_pos_3d_landmarks["$spine1"] = new THREE.Vector3()
       .addVectors(
         custom_pos_3d_landmarks["$center_hip"].clone().multiplyScalar(3),
-        custom_pos_3d_landmarks["$neck"].clone().multiplyScalar(2)
+        custom_pos_3d_landmarks["$center_shoulder"].clone().multiplyScalar(2)
       )
       .multiplyScalar(0.2);
 
     custom_pos_3d_landmarks["$spine2"] = new THREE.Vector3()
       .addVectors(
         custom_pos_3d_landmarks["$center_hip"].clone().multiplyScalar(1),
-        custom_pos_3d_landmarks["$neck"].clone().multiplyScalar(4)
+        custom_pos_3d_landmarks["$center_shoulder"].clone().multiplyScalar(4)
       )
       .multiplyScalar(0.2);
 
@@ -553,9 +553,13 @@ function onResults2(results) {
       .multiplyScalar(1 / 3);
 
     delete custom_pos_3d_landmarks["$center_hip"];
-    delete custom_pos_3d_landmarks["$neck"];
+    delete custom_pos_3d_landmarks["$center_shoulder"];
 
-    total_pos_3d_landmarks = Object.assign({},pos_3d_landmarks,custom_pos_3d_landmarks);
+    total_pos_3d_landmarks = Object.assign(
+      {},
+      pos_3d_landmarks,
+      custom_pos_3d_landmarks
+    );
 
     i = 0;
     for (const [key, value] of Object.entries(custom_pos_3d_landmarks)) {
@@ -606,13 +610,49 @@ function onResults2(results) {
     );
     const RootQuaternion_hip = new THREE.Quaternion().copy(hip_root.quaternion);
 
+    let $chain_spines;
+    let $chain = R_hips.clone();
+    const R_spine = computeJointParentR(
+      "BoySpine1",
+      "$spine1",
+      "$spine",
+      $chain,
+      skeleton
+    );
+    skeleton
+      .getBoneByName("BoySpine")
+      .quaternion.slerp(new Quaternion().setFromRotationMatrix(R_spine), 0.9);
+    $chain.multiply(R_spine);
+
+    const R_spine1 = computeJointParentR(
+      "BoySpine2",
+      "$spine2",
+      "$spine1",
+      $chain,
+      skeleton
+    );
+    skeleton
+      .getBoneByName("BoySpine1")
+      .quaternion.slerp(new Quaternion().setFromRotationMatrix(R_spine1), 0.9);
+    $chain.multiply(R_spine1);
+
+    const R_spine2 = computeJointParentR(
+      "BoyNeck",
+      "$neck1",
+      "$spine2",
+      $chain,
+      skeleton
+    );
+    skeleton
+      .getBoneByName("BoySpine2")
+      .quaternion.slerp(new Quaternion().setFromRotationMatrix(R_spine2), 0.9);
+    $chain_spines = $chain.multiply(R_spine2);
 
     // TEST------------------------------------------------------------------------------------------------------------------------------------------------
     // 루트부터 싹 새롭게 설정하지 않았음 : 어깨의 상대적인 위치만 설정해주겠다 ( 어깨를 임시적인 루트로 정의하고 진행 )
     // => 실제로는 루트에서부터 차례대로 로컬 트랜스폼이 작동하도록 만들어야 함
 
     // 하위 부분 움직이도록 만들기
-
 
     let jointLeftWrist = pos_3d_landmarks["left_wrist"]; // p2
     let boneLeftHand = skeleton.getBoneByName("BoyLeftHand"); // j2
@@ -624,8 +664,6 @@ function onResults2(results) {
     let R1 = computeR(j2, Rv12);
     skeleton.getBoneByName("BoyLeftForeArm").setRotationFromMatrix(R1); // setRotationFromQuaternion() 사용 권장
     // console.log(boneLeftArm);
-
-
 
     // console.log(skeleton);
 
