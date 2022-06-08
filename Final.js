@@ -611,42 +611,265 @@ function onResults2(results) {
     const RootQuaternion_hip = new THREE.Quaternion().copy(hip_root.quaternion);
 
     let $chain_spines;
-    let $chain = R_hips.clone();
-    const R_spine = computeJointParentR(
-      "BoySpine1",
-      "$spine1",
-      "$spine",
-      $chain,
-      skeleton
-    );
-    skeleton
-      .getBoneByName("BoySpine")
-      .quaternion.slerp(new Quaternion().setFromRotationMatrix(R_spine), 0.9);
-    $chain.multiply(R_spine);
 
-    const R_spine1 = computeJointParentR(
-      "BoySpine2",
-      "$spine2",
-      "$spine1",
-      $chain,
+    // spine
+    {
+      let $chain = R_hips.clone();
+      const R_spine = computeJointParentR(
+        "BoySpine1",
+        "$spine1",
+        "$spine",
+        $chain,
+        skeleton
+      );
       skeleton
-    );
-    skeleton
-      .getBoneByName("BoySpine1")
-      .quaternion.slerp(new Quaternion().setFromRotationMatrix(R_spine1), 0.9);
-    $chain.multiply(R_spine1);
+        .getBoneByName("BoySpine")
+        .quaternion.slerp(new Quaternion().setFromRotationMatrix(R_spine), 0.9);
+      $chain.multiply(R_spine);
 
-    const R_spine2 = computeJointParentR(
-      "BoyNeck",
-      "$neck1",
-      "$spine2",
-      $chain,
+      const R_spine1 = computeJointParentR(
+        "BoySpine2",
+        "$spine2",
+        "$spine1",
+        $chain,
+        skeleton
+      );
       skeleton
-    );
-    skeleton
-      .getBoneByName("BoySpine2")
-      .quaternion.slerp(new Quaternion().setFromRotationMatrix(R_spine2), 0.9);
-    $chain_spines = $chain.multiply(R_spine2);
+        .getBoneByName("BoySpine1")
+        .quaternion.slerp(
+          new Quaternion().setFromRotationMatrix(R_spine1),
+          0.9
+        );
+      $chain.multiply(R_spine1);
+
+      const R_spine2 = computeJointParentR(
+        "BoyNeck",
+        "$neck1",
+        "$spine2",
+        $chain,
+        skeleton
+      );
+      skeleton
+        .getBoneByName("BoySpine2")
+        .quaternion.slerp(
+          new Quaternion().setFromRotationMatrix(R_spine2),
+          0.9
+        );
+      $chain_spines = $chain.multiply(R_spine2);
+    }
+
+    // neck
+    {
+      let $chain = $chain_spines.clone();
+      const R_neck = computeJointParentR(
+        "BoyHead",
+        "$neck2",
+        "$neck1",
+        $chain,
+        skeleton
+      );
+      skeleton
+        .getBoneByName("BoyNeck")
+        .quaternion.slerp(new Quaternion().setFromRotationMatrix(R_neck), 0.9);
+      $chain.multiply(R_neck);
+    }
+
+    // left arm
+    {
+      let $chain = $chain_spines.clone();
+      const R_shoulder_left = computeJointParentR(
+        "BoyLeftArm",
+        "left_shoulder",
+        "$left_inner_shoulder",
+        $chain,
+        skeleton
+      );
+      skeleton
+        .getBoneByName("BoyLeftShoulder")
+        .quaternion.slerp(
+          new Quaternion().setFromRotationMatrix(R_shoulder_left),
+          0.9
+        );
+      $chain.multiply(R_shoulder_left);
+
+      const R_arm = computeJointParentR(
+        "BoyLeftForeArm",
+        "left_elbow",
+        "left_shoulder",
+        $chain,
+        skeleton
+      );
+      skeleton
+        .getBoneByName("BoyLeftArm")
+        .quaternion.slerp(new Quaternion().setFromRotationMatrix(R_arm), 0.9);
+      $chain.multiply(R_arm);
+
+      const R_forearm = computeJointParentR(
+        "BoyLeftHand",
+        "left_wrist",
+        "left_elbow",
+        $chain,
+        skeleton
+      );
+      skeleton
+        .getBoneByName("BoyLeftForeArm")
+        .quaternion.slerp(
+          new Quaternion().setFromRotationMatrix(R_forearm),
+          0.9
+        );
+      $chain.multiply(R_forearm);
+
+      const R_index1 = computeJointParentR(
+        "BoyLeftHandIndex1",
+        "left_index",
+        "left_wrist",
+        $chain,
+        skeleton
+      );
+      skeleton
+        .getBoneByName("BoyLeftHand")
+        .quaternion.slerp(
+          new Quaternion().setFromRotationMatrix(R_index1),
+          0.9
+        );
+
+      $chain.multiply(R_index1);
+    }
+
+    // right arm
+    {
+      let $chain = $chain_spines.clone();
+      const R_shoulder_right = computeJointParentR(
+        "BoyRightArm",
+        "right_shoulder",
+        "$right_inner_shoulder",
+        $chain,
+        skeleton
+      );
+      skeleton
+        .getBoneByName("BoyRightShoulder")
+        .quaternion.slerp(
+          new Quaternion().setFromRotationMatrix(R_shoulder_right),
+          0.9
+        );
+      $chain.multiply(R_shoulder_right);
+
+      const R_arm = computeJointParentR(
+        "BoyRightForeArm",
+        "right_elbow",
+        "right_shoulder",
+        $chain,
+        skeleton
+      );
+      skeleton
+        .getBoneByName("BoyRightArm")
+        .quaternion.slerp(new Quaternion().setFromRotationMatrix(R_arm), 0.9);
+      $chain.multiply(R_arm);
+
+      const R_forearm = computeJointParentR(
+        "BoyRightHand",
+        "right_wrist",
+        "right_elbow",
+        $chain,
+        skeleton
+      );
+      skeleton
+        .getBoneByName("BoyRightForeArm")
+        .quaternion.slerp(
+          new Quaternion().setFromRotationMatrix(R_forearm),
+          0.9
+        );
+      $chain.multiply(R_forearm);
+
+      const R_hand = computeJointParentR(
+        "BoyRightHandIndex1",
+        "right_index",
+        "right_wrist",
+        $chain,
+        skeleton
+      );
+      skeleton
+        .getBoneByName("BoyRightHand")
+        .quaternion.slerp(new Quaternion().setFromRotationMatrix(R_hand), 0.9);
+    }
+
+    // left legs
+    {
+      let $chain = R_hips.clone();
+      const R_upLeg = computeJointParentR(
+        "BoyLeftLeg",
+        "left_knee",
+        "left_hip",
+        $chain,
+        skeleton
+      );
+      skeleton
+        .getBoneByName("BoyLeftUpLeg")
+        .quaternion.slerp(new Quaternion().setFromRotationMatrix(R_upLeg), 0.9);
+      $chain = $chain.multiply(R_upLeg);
+
+      const R_leg = computeJointParentR(
+        "BoyLeftFoot",
+        "left_ankle",
+        "left_knee",
+        $chain,
+        skeleton
+      );
+      skeleton
+        .getBoneByName("BoyLeftLeg")
+        .quaternion.slerp(new Quaternion().setFromRotationMatrix(R_leg), 0.9);
+
+      $chain = $chain.multiply(R_leg);
+      const R_foot = computeJointParentR(
+        "BoyLeftToeBase",
+        "left_foot_index",
+        "left_ankle",
+        $chain,
+        skeleton
+      );
+      skeleton
+        .getBoneByName("BoyLeftFoot")
+        .quaternion.slerp(new Quaternion().setFromRotationMatrix(R_foot), 0.9);
+    }
+
+    // right legs
+    {
+      let $chain = R_hips.clone();
+      const R_upLeg = computeJointParentR(
+        "BoyRightLeg",
+        "right_knee",
+        "right_hip",
+        $chain,
+        skeleton
+      );
+      skeleton
+        .getBoneByName("BoyRightUpLeg")
+        .quaternion.slerp(new Quaternion().setFromRotationMatrix(R_upLeg), 0.9);
+      $chain = $chain.multiply(R_upLeg);
+
+      const R_leg = computeJointParentR(
+        "BoyRightFoot",
+        "right_ankle",
+        "right_knee",
+        $chain,
+        skeleton
+      );
+      skeleton
+        .getBoneByName("BoyRightLeg")
+        .quaternion.slerp(new Quaternion().setFromRotationMatrix(R_leg), 0.9);
+
+      $chain = $chain.multiply(R_leg);
+      const R_foot = computeJointParentR(
+        "BoyRightToeBase",
+        "right_foot_index",
+        "right_ankle",
+        $chain,
+        skeleton
+      );
+      skeleton
+        .getBoneByName("BoyRightFoot")
+        .quaternion.slerp(new Quaternion().setFromRotationMatrix(R_foot), 0.9);
+    }
 
     // TEST------------------------------------------------------------------------------------------------------------------------------------------------
     // 루트부터 싹 새롭게 설정하지 않았음 : 어깨의 상대적인 위치만 설정해주겠다 ( 어깨를 임시적인 루트로 정의하고 진행 )
@@ -654,6 +877,7 @@ function onResults2(results) {
 
     // 하위 부분 움직이도록 만들기
 
+    /*
     let jointLeftWrist = pos_3d_landmarks["left_wrist"]; // p2
     let boneLeftHand = skeleton.getBoneByName("BoyLeftHand"); // j2
     let v12 = new THREE.Vector3()
@@ -663,6 +887,7 @@ function onResults2(results) {
     let Rv12 = v12.clone().applyMatrix4(R0.clone().transpose()); // R0 의 역행렬으로부터 -> transpose()
     let R1 = computeR(j2, Rv12);
     skeleton.getBoneByName("BoyLeftForeArm").setRotationFromMatrix(R1); // setRotationFromQuaternion() 사용 권장
+    */
     // console.log(boneLeftArm);
 
     // console.log(skeleton);
