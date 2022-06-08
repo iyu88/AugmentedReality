@@ -2,14 +2,15 @@ const videoElement = document.getElementsByClassName("input_video")[0];
 const canvasElement = document.getElementsByClassName("output_canvas")[0];
 const canvasCtx = canvasElement.getContext("2d");
 
-import "../node_modules/@mediapipe/camera_utils/camera_utils.js";
-import "../node_modules/@mediapipe/control_utils/control_utils.js";
-import "../node_modules/@mediapipe/drawing_utils/drawing_utils.js";
-import "../node_modules/@mediapipe/pose/pose.js";
+import { Holistic } from "@mediapipe/holistic";
+// import "../node_modules/@mediapipe/camera_utils/camera_utils.js";
+// import "../node_modules/@mediapipe/control_utils/control_utils.js";
+// import "../node_modules/@mediapipe/drawing_utils/drawing_utils.js";
+// import "../node_modules/@mediapipe/pose/pose.js";
 
 import * as THREE from "three";
-import { OrbitControls } from "../node_modules/three/examples/jsm/controls/OrbitControls.js";
-import { GLTFLoader } from "../node_modules/three/examples/jsm/loaders/GLTFLoader.js";
+import { OrbitControls } from "./node_modules/three/examples/jsm/controls/OrbitControls.js";
+import { GLTFLoader } from "./node_modules/three/examples/jsm/loaders/GLTFLoader.js";
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 const render_w = videoElement.videoWidth;
@@ -369,9 +370,9 @@ function onResults2(results) {
   canvasCtx.restore();
 }
 
-const pose = new Pose({
+const pose = new Holistic({
   locateFile: (file) => {
-    return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+    return `./node_modules/@mediapipe/holistic/${file}`;
   },
 });
 
