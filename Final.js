@@ -584,7 +584,9 @@ function onResults2(results) {
       );
 
       let i = 0;
+      const left_hand2pose = new THREE.Vector3().subVectors(pos_3d_landmarks['left_wrist'],lefthand_3d_landmarks['LEFT_WRIST']);
       for (const [key, value] of Object.entries(lefthand_3d_landmarks)) {
+        value.add(left_hand2pose);
         hand_points.geometry.attributes.position.array[3 * i + 0] = value.x;
         hand_points.geometry.attributes.position.array[3 * i + 1] = value.y;
         hand_points.geometry.attributes.position.array[3 * i + 2] = value.z;
@@ -608,15 +610,17 @@ function onResults2(results) {
         righthand_landmarks_dict
       );
 
+      const right_hand2pose = new THREE.Vector3().subVectors(pos_3d_landmarks['right_wrist'],righthand_3d_landmarks['RIGHT_WRIST']);
       let i = 21;
       for (const [key, value] of Object.entries(righthand_3d_landmarks)) {
+        value.add(right_hand2pose);
         hand_points.geometry.attributes.position.array[3 * i + 0] = value.x;
         hand_points.geometry.attributes.position.array[3 * i + 1] = value.y;
         hand_points.geometry.attributes.position.array[3 * i + 2] = value.z;
         i++;
       }
-      hand_points.geometry.attributes.position.needsUpdate = true;
     }
+    hand_points.geometry.attributes.position.needsUpdate = true;
 
     total_pos_3d_landmarks = Object.assign(
       {},
@@ -654,7 +658,7 @@ function onResults2(results) {
     // TEST------------------------------------------------------------------------------------------------------------------------------------------------
     const R_hips = computeR_hips();
     const hip_root = skeleton.getBoneByName("BoyHips");
-    const hip_joint = custom_pos_3d_landmarks["hips"];
+    //const hip_joint = custom_pos_3d_landmarks["hips"];
     //console.log(hip_root.parent.position);
     //console.log(hip_root.position);
     ///////////////////////////////////hip_root.position.set(0, 0, 0);
@@ -664,7 +668,7 @@ function onResults2(results) {
       new THREE.Quaternion().setFromRotationMatrix(R_hips),
       0.9
     );
-    const RootQuaternion_hip = new THREE.Quaternion().copy(hip_root.quaternion);
+    //const RootQuaternion_hip = new THREE.Quaternion().copy(hip_root.quaternion);
 
     let $chain_spines;
 
@@ -774,86 +778,80 @@ function onResults2(results) {
           0.9
         );
       $chain.multiply(R_forearm);
+      
 
-      console.log(total_pos_3d_landmarks["LEFT_INDEX_FINGER_MCP"]);
-      if (total_pos_3d_landmarks["LEFT_INDEX_FINGER_MCP"]) {
-        const R_index1 = computeJointParentR(
+      if(results.leftHandLandmarks){ // lefthand rigging
+
+        // const R_hand = computeJointParentR(
+        //   "BoyLeftHandIndex1",
+        //   "LEFT_INDEX_FINGER_MCP",
+        //   "left_wrist",
+        //   $chain,
+        //   skeleton
+        // );
+        // skeleton
+        //   .getBoneByName("BoyLeftHand")
+        //   .quaternion.slerp(new Quaternion().setFromRotationMatrix(R_hand), 0.9);
+        
+        let jointLeftWrist = total_pos_3d_landmarks["LEFT_WRIST"];
+        let jointLeftThumb1 = total_pos_3d_landmarks["LEFT_THUMB_CMC"];
+        let jointLeftIndex1 = total_pos_3d_landmarks["LEFT_INDEX_FINGER_MCP"];
+        let jointLeftMiddle1 = total_pos_3d_landmarks["LEFT_MIDDLE_FINGER_MCP"];
+        let jointLeftRing1 = total_pos_3d_landmarks["LEFT_RING_FINGER_MCP"];
+        let jointLeftPinky1 = total_pos_3d_landmarks["LEFT_PINKY_MCP"];
+
+        let v_wrist_to_thumb1 = new THREE.Vector3().subVectors(jointLeftThumb1,jointLeftWrist).normalize();
+        let v_writst_to_pinky1 = new THREE.Vector3().subVectors(jointLeftPinky1,jointLeftWrist).normalize();
+
+        
+        let boneLeftThumb1 = skeleton.getBoneByName("BoyLeftHandThumb1");
+        let Rv_wrist2thumb1 = v_wrist_to_thumb1.applyMatrix4($chain.clone().transpose());
+        let j_thumb1 = boneLeftThumb1.position.clone().normalize();
+        let R_hand1 = computeR(j_thumb1,Rv_wrist2thumb1);
+
+        skeleton.getBoneByName("BoyLeftHand").setRotationFromMatrix(R_hand1);
+
+
+        const R_hand_thumb = computeJointParentR(
+          "BoyLeftHandThumb1",
+          "LEFT_THUMB_CMC",
+          "left_wrist",
+          $chain,
+          skeleton
+        );
+        const R_hand_index = computeJointParentR(
           "BoyLeftHandIndex1",
           "LEFT_INDEX_FINGER_MCP",
-          "LEFT_WRIST",
+          "left_wrist",
+          $chain,
+          skeleton
+        );
+        const R_hand_middle = computeJointParentR(
+          "BoyLeftHandMiddle1",
+          "LEFT_MIDDLE_FINGER_MCP",
+          "left_wrist",
+          $chain,
+          skeleton
+        );
+        const R_hand_ring = computeJointParentR(
+          "BoyLeftHandRing1",
+          "LEFT_RING_FINGER_MCP",
+          "left_wrist",
+          $chain,
+          skeleton
+        );
+        const R_hand_pinky = computeJointParentR(
+          "BoyLeftHandPinky1",
+          "LEFT_PINKY_MCP",
+          "left_wrist",
           $chain,
           skeleton
         );
         skeleton
-          .getBoneByName("BoyLeftHand")
-          .quaternion.slerp(
-            new Quaternion().setFromRotationMatrix(R_index1),
-            0.9
-          );
+        .getBoneByName("BoyLeftHand")
+        .quaternion.slerp(new Quaternion().setFromRotationMatrix(R_hand_index), 0.9);
 
-        $chain.multiply(R_index1);
-      }
 
-      if (
-        total_pos_3d_landmarks["LEFT_INDEX_FINGER_PIP"] &&
-        total_pos_3d_landmarks["LEFT_INDEX_FINGER_MCP"]
-      ) {
-        const R_index2 = computeJointParentR(
-          "BoyLeftHandIndex2",
-          "LEFT_INDEX_FINGER_PIP",
-          "LEFT_INDEX_FINGER_MCP",
-          $chain,
-          skeleton
-        );
-        skeleton
-          .getBoneByName("BoyLeftHandIndex1")
-          .quaternion.slerp(
-            new Quaternion().setFromRotationMatrix(R_index2),
-            0.9
-          );
-
-        $chain.multiply(R_index2);
-      }
-
-      if (
-        total_pos_3d_landmarks["LEFT_INDEX_FINGER_DIP"] &&
-        total_pos_3d_landmarks["LEFT_INDEX_FINGER_PIP"]
-      ) {
-        const R_index3 = computeJointParentR(
-          "BoyLeftHandIndex3",
-          "LEFT_INDEX_FINGER_DIP",
-          "LEFT_INDEX_FINGER_PIP",
-          $chain,
-          skeleton
-        );
-        skeleton
-          .getBoneByName("BoyLeftHandIndex2")
-          .quaternion.slerp(
-            new Quaternion().setFromRotationMatrix(R_index3),
-            0.9
-          );
-
-        $chain.multiply(R_index3);
-      }
-
-      if (
-        total_pos_3d_landmarks["LEFT_INDEX_FINGER_TIP"] &&
-        total_pos_3d_landmarks["LEFT_INDEX_FINGER_DIP"]
-      ) {
-        const R_index4 = computeJointParentR(
-          "BoyLeftHandIndex4",
-          "LEFT_INDEX_FINGER_TIP",
-          "LEFT_INDEX_FINGER_DIP",
-          $chain,
-          skeleton
-        );
-        skeleton
-          .getBoneByName("BoyLeftHandIndex3")
-          .quaternion.slerp(
-            new Quaternion().setFromRotationMatrix(R_index4),
-            0.9
-          );
-        $chain.multiply(R_index4);
       }
     }
 
@@ -1046,4 +1044,15 @@ async function detectionFrame() {
   videoElement.requestVideoFrameCallback(detectionFrame);
 }
 
-detectionFrame();
+//detectionFrame();
+
+
+
+const camera = new Camera(videoElement, {
+  onFrame: async () => {
+    await holistic.send({ image: videoElement });
+  },
+  width: 1280,
+  height: 720,
+});
+camera.start();

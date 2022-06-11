@@ -362,20 +362,41 @@ function onResults2(results) {
     // -> 거리는 랜드마크에서 벡터로 구한 것과는 다름 : 수식에서 오프셋과 벡터는 같기 때문에 방향은 정규화된 방향을 사용할 수 있음
 
 
-    let jointLeftShoulder = pos_3d_landmarks["left_shoulder"]; // p0 -> 부모
-    let jointLeftElbow = pos_3d_landmarks["left_elbow"]; // p1 -> 자식
-    let boneLeftArm = skeleton.getBoneByName("mixamorigLeftArm"); // j1
-    let v01 = new THREE.Vector3()
-      .subVectors(jointLeftElbow, jointLeftShoulder) // 0 에서 1 을 뺀다 ( 순서는 1 다음 0 )
-      .normalize(); // 정규화하여 유닛 벡터를 구함
-    let j1 = boneLeftArm.position.clone().normalize(); // 팔꿈치 위치 정규화
-    // j1 을 v01 로 가져감 ( Rotation 을 구하는 함수는 정의되어 있음 - computeR )
-    let R0 = computeR(j1, v01); // LeftArm 의 Rotation Vector 를 구할 수 있음 ( 앞의 녀석을 뒤의 녀석으로 만들어주는 매트릭스를 계산 )
-    // 로컬 트랜스폼을 변경해줌
-    boneLeftArm.setRotationFromMatrix(R0); // Matrix4 로 설정
+    // let jointLeftShoulder = pos_3d_landmarks["left_shoulder"]; // p0 -> 부모
+    // let jointLeftElbow = pos_3d_landmarks["left_elbow"]; // p1 -> 자식
+    // let boneLeftArm = skeleton.getBoneByName("mixamorigLeftArm"); // j1
+    // let v01 = new THREE.Vector3()
+    //   .subVectors(jointLeftElbow, jointLeftShoulder) // 0 에서 1 을 뺀다 ( 순서는 1 다음 0 )
+    //   .normalize(); // 정규화하여 유닛 벡터를 구함
+    // let j1 = boneLeftArm.position.clone().normalize(); // 팔꿈치 위치 정규화
+    // // j1 을 v01 로 가져감 ( Rotation 을 구하는 함수는 정의되어 있음 - computeR )
+    // let R0 = computeR(j1, v01); // LeftArm 의 Rotation Vector 를 구할 수 있음 ( 앞의 녀석을 뒤의 녀석으로 만들어주는 매트릭스를 계산 )
+    // // 로컬 트랜스폼을 변경해줌
+    // boneLeftArm.setRotationFromMatrix(R0); // Matrix4 로 설정
 
     
 
+
+    let jointLeftShoulder = pos_3d_landmarks["left_shoulder"]; // p0
+    let jointLeftElbow = pos_3d_landmarks["left_elbow"]; // p1
+    let boneLeftForeArm = skeleton.getBoneByName("mixamorigLeftForeArm"); // j1
+    let v01 = new THREE.Vector3()
+      .subVectors(jointLeftElbow, jointLeftShoulder)
+      .normalize();
+    let j1 = boneLeftForeArm.position.clone().normalize();
+    let R0 = computeR(j1, v01);
+    skeleton.getBoneByName("mixamorigLeftArm").setRotationFromMatrix(R0);
+
+    let jointLeftWrist = pos_3d_landmarks["left_wrist"]; // p2
+    let boneLeftHand = skeleton.getBoneByName("mixamorigLeftHand"); // j2
+    let v12 = new THREE.Vector3()
+      .subVectors(jointLeftWrist, jointLeftElbow)
+      .normalize();
+    let j2 = boneLeftHand.position.clone().normalize();
+    let Rv12 = v12.clone().applyMatrix4(R0.clone().transpose());
+    let R1 = computeR(j2, Rv12);
+    skeleton.getBoneByName("mixamorigRightHand").setRotationFromMatrix(R1);
+    //console.log(boneLeftArm);
 
     // 갈라지는 곳에서는 두 개의 Rotation Matrix 가 나올 수 있고, Rotation 의 Interpolation 을 위해서 Quaternion 사용
     // 랜드마크 + 홀리스틱 ( 손가락 관절 ) + IK Solver ( 바닥에 붙이기 - 타켓 포지션에 적용 ) + Physics ( Skin Mesh 에 대해서 충돌 피직스 설정 - 충돌 일어나지 않도록 )
