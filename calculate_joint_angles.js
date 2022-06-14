@@ -230,7 +230,7 @@ class ThreeMpPose {
     let R_chain_spines;
     {
       let R_chain = R_hips.clone();
-      const R_spine0 = this.computeJointParentR(
+      const R_spine0 = this.computeJointarentR(
         "mixamorigSpine1",
         "spine1",
         "spine0",

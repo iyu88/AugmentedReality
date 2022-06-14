@@ -3,6 +3,8 @@ import { OrbitControls } from "./node_modules/three/examples/jsm/controls/OrbitC
 import { GLTFLoader } from "./node_modules/three/examples/jsm/loaders/GLTFLoader.js";
 import { FBXLoader } from "./node_modules/three/examples/jsm/loaders/FBXLoader.js";
 import { CCDIKSolver } from "./node_modules/three/examples/jsm/animation/CCDIKSolver.js";
+import { MMDLoader } from "./node_modules/three/examples/jsm/loaders/MMDLoader.js"
+
 
 // DOM 요소 가져오기
 const videoElement = document.getElementsByClassName("input_video")[0];
@@ -95,6 +97,7 @@ let model,
 let axis_helpers = [];
 const loader2 = new GLTFLoader();
 const loader = new FBXLoader(); //fbxLoader
+const mmdloader = new MMDLoader();
 loader2.load("../models/gltf/Xbot.glb", function (glb) {
   // 마네킹을 그리는 부분
   model = glb.scene; // gltf.scene -> GLTF 용
@@ -378,7 +381,7 @@ function computeQuaternion(A, B) {
     .normalize();
   const w = cross_AB.clone().normalize();
 
-  const angle = Math.acos(idot);
+  const angle = Math.acos(Math.abs(idot));
   // const Q = new THREE.Quaternion().setFromAxisAngle(w, angle);
   // return Q;
   const half_angle = angle / 2;
@@ -522,6 +525,7 @@ function onResults2(results) {
 
     return pose3dDict;
   }
+  
   if (results.poseLandmarks) {
     let pose_landmarks_dict = {};
     results.poseLandmarks.forEach((landmark, i) => {
@@ -547,7 +551,7 @@ function onResults2(results) {
     }
     pose_points.geometry.attributes.position.needsUpdate = true;
 
-    /* Custom Pos 3d Landmarks */
+    // Custom Pos 3d Landmarks
 
     custom_pos_3d_landmarks["$center_hip"] = new THREE.Vector3()
       .addVectors(
@@ -761,7 +765,7 @@ function onResults2(results) {
       );
       skeleton.getBoneByName("mixamorigSpine").quaternion.slerp(Q_spine, 0.9);
       $chain.multiply(Q_spine);
-
+      
       const Q_spine1 = computeJointParentQ(
         "mixamorigSpine2",
         "$spine2",
@@ -771,7 +775,7 @@ function onResults2(results) {
       );
       skeleton.getBoneByName("mixamorigSpine1").quaternion.slerp(Q_spine1, 0.9);
       $chain.multiply(Q_spine1);
-
+      
       const Q_spine2 = computeJointParentQ(
         "mixamorigNeck",
         "$neck1",
@@ -1041,7 +1045,7 @@ function onResults2(results) {
         .getBoneByName("mixamorigRightFoot")
         .quaternion.slerp(Q_foot, 0.9);
     }
-    /*
+    
 
 
     // TEST------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1050,17 +1054,17 @@ function onResults2(results) {
 
     // 하위 부분 움직이도록 만들기
 
-    /*
-    let jointLeftWrist = pos_3d_landmarks["left_wrist"]; // p2
-    let boneLeftHand = skeleton.getBoneByName("mixamorigLeftHand"); // j2
-    let v12 = new THREE.Vector3()
-      .subVectors(jointLeftWrist, jointLeftElbow) // (벡터 2, 벡터 1);
-      .normalize();
-    let j2 = boneLeftHand.position.clone().normalize();
-    let Rv12 = v12.clone().applyMatrix4(R0.clone().transpose()); // R0 의 역행렬으로부터 -> transpose()
-    let R1 = computeR(j2, Rv12);
-    skeleton.getBoneByName("mixamorigLeftForeArm").setRotationFromMatrix(R1); // setRotationFromQuaternion() 사용 권장
-    */
+    
+    // let jointLeftWrist = pos_3d_landmarks["left_wrist"]; // p2
+    // let boneLeftHand = skeleton.getBoneByName("mixamorigLeftHand"); // j2
+    // let v12 = new THREE.Vector3()
+    //   .subVectors(jointLeftWrist, jointLeftElbow) // (벡터 2, 벡터 1);
+    //   .normalize();
+    // let j2 = boneLeftHand.position.clone().normalize();
+    // let Rv12 = v12.clone().applyMatrix4(R0.clone().transpose()); // R0 의 역행렬으로부터 -> transpose()
+    // let R1 = computeR(j2, Rv12);
+    // skeleton.getBoneByName("mixamorigLeftForeArm").setRotationFromMatrix(R1); // setRotationFromQuaternion() 사용 권장
+    
     // console.log(boneLeftArm);
 
     // console.log(skeleton);
@@ -1069,7 +1073,7 @@ function onResults2(results) {
     // 랜드마크 + 홀리스틱 ( 손가락 관절 ) + IK Solver ( 바닥에 붙이기 - 타켓 포지션에 적용 ) + Physics ( Skin Mesh 에 대해서 충돌 피직스 설정 - 충돌 일어나지 않도록 )
   }
 
-  ikSolver?.update();
+  //ikSolver?.update();
   renderer.render(scene, camera_ar);
   canvasCtx.restore();
 }

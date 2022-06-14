@@ -1,0 +1,19 @@
+[Info]
+Version = 3
+
+[Effect]
+Obj = none
+Obj[0] = textures\default.fx
+Obj[1] = textures\default.fx
+Obj[2] = textures\default.fx
+Obj[3] = textures\default.fx
+Obj[4] = textures\default.fx
+Obj[5] = textures\default.fx
+Obj[6] = textures\outfit_pg.fx
+Obj[7] = textures\outfit_pg.fx
+Obj[8] = textures\default.fx
+Obj[9] = textures\default.fx
+Obj[10] = textures\default.fx
+Obj[11] = textures\outfit_pg.fx
+Obj[12] = textures\default.fx
+
