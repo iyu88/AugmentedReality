@@ -103,9 +103,14 @@ loader2.load("../models/gltf/Xbot.glb", function (glb) {
   model.scale.multiplyScalar(1); // 모델 전체의 크기 조절
 
   let bones = [];
+
+  let left_mesh = null;
   model.traverse(function (object) {
     // object.scale.multiplyScalar(1);
-    if (object.isMesh) object.castShadow = true; // 스킨 메쉬
+    if (object.isMesh) {
+      object.castShadow = true; // 스킨 메쉬
+      if (!left_mesh) left_mesh = object;
+    }
 
     //console.log(object.isBone);
     if (object.isBone) {
@@ -155,8 +160,8 @@ loader2.load("../models/gltf/Xbot.glb", function (glb) {
     },
   ];
 
-  console.log(model.children[0].children[0]);
-  // ikSolver = new CCDIKSolver(model.children[0].children[0], iks_left);
+  // console.log(model.children[0].children[0]);
+  ikSolver = new CCDIKSolver(left_mesh, iks_left);
 
   //const animations = gltf.animations;
   //mixer = new THREE.AnimationMixer( model );
@@ -1038,6 +1043,7 @@ function onResults2(results) {
     }
     /*
 
+
     // TEST------------------------------------------------------------------------------------------------------------------------------------------------
     // 루트부터 싹 새롭게 설정하지 않았음 : 어깨의 상대적인 위치만 설정해주겠다 ( 어깨를 임시적인 루트로 정의하고 진행 )
     // => 실제로는 루트에서부터 차례대로 로컬 트랜스폼이 작동하도록 만들어야 함
@@ -1063,6 +1069,7 @@ function onResults2(results) {
     // 랜드마크 + 홀리스틱 ( 손가락 관절 ) + IK Solver ( 바닥에 붙이기 - 타켓 포지션에 적용 ) + Physics ( Skin Mesh 에 대해서 충돌 피직스 설정 - 충돌 일어나지 않도록 )
   }
 
+  ikSolver?.update();
   renderer.render(scene, camera_ar);
   canvasCtx.restore();
 }
@@ -1092,7 +1099,7 @@ async function detectionFrame() {
   videoElement.requestVideoFrameCallback(detectionFrame);
 }
 
-detectionFrame();
+// detectionFrame();
 
 const camera = new Camera(videoElement, {
   onFrame: async () => {
