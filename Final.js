@@ -86,7 +86,10 @@ const grid_helper = new THREE.GridHelper(1000, 1000);
 grid_helper.rotation.x = Math.PI / 2;
 ground_mesh.add(grid_helper);
 
-let ikSolver;
+let ikSolver_left;
+let ikSolver_right;
+let ikSolver_left_foot;
+let ikSolver_right_foot;
 
 let model,
   skeleton = null,
@@ -106,12 +109,12 @@ mmdloader.load("../models/lin/lin.pmd", function (mmd) {
 
   let bones = [];
 
-  let left_mesh = null;
+  let char_mesh = null;
   model.traverse(function (object) {
     // object.scale.multiplyScalar(1);
     if (object.isMesh) {
       object.castShadow = true; // 스킨 메쉬
-      if (!left_mesh) left_mesh = object;
+      if (!char_mesh) char_mesh = object;
     }
 
     //console.log(object.isBone);
@@ -150,22 +153,42 @@ mmdloader.load("../models/lin/lin.pmd", function (mmd) {
 
   const iks_left = [
     {
-      target: 17,
-      effector: 16,
-      links: [
-        { index: 6 },
-        { index: 7 },
-        { index: 8 },
-        { index: 9 },
-        { index: 15 },
-      ],
+      target: 44,
+      effector: 43,
+      links: [{ index: 30 }, { index: 31 }, { index: 32 }, { index: 33 }],
     },
   ];
 
-  // console.log(model.children[0].children[0]);
-  ikSolver = new CCDIKSolver(left_mesh, iks_left);
+  const iks_right = [
+    {
+      target: 70,
+      effector: 69,
+      links: [{ index: 56 }, { index: 57 }, { index: 58 }, { index: 59 }],
+    },
+  ];
 
-  console.log(bones.map((el) => el.name).join("\n"));
+  const iks_left_foot = [
+    {
+      target: 88,
+      effector: 87,
+      links: [{ index: 85 }, { index: 86 }],
+    },
+  ];
+
+  const iks_right_foot = [
+    {
+      target: 92,
+      effector: 91,
+      links: [{ index: 89 }, { index: 90 }],
+    },
+  ];
+  // console.log(model.children[0].children[0]);
+  ikSolver_left = new CCDIKSolver(char_mesh, iks_left);
+  ikSolver_right = new CCDIKSolver(char_mesh, iks_right);
+  ikSolver_left_foot = new CCDIKSolver(char_mesh, iks_left_foot);
+  ikSolver_right_foot = new CCDIKSolver(char_mesh, iks_right_foot);
+
+  // console.log(bones.map((el) => el.name).join("\n"));
 
   //const animations = gltf.animations;
   //mixer = new THREE.AnimationMixer( model );
@@ -1081,7 +1104,10 @@ function onResults2(results) {
     // 랜드마크 + 홀리스틱 ( 손가락 관절 ) + IK Solver ( 바닥에 붙이기 - 타켓 포지션에 적용 ) + Physics ( Skin Mesh 에 대해서 충돌 피직스 설정 - 충돌 일어나지 않도록 )
   }
 
-  //ikSolver?.update();
+  ikSolver_left?.update();
+  ikSolver_right?.update();
+  ikSolver_left_foot?.update();
+  ikSolver_right_foot?.update();
   renderer.render(scene, camera_ar);
   canvasCtx.restore();
 }
