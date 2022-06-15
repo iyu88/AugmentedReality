@@ -3,8 +3,7 @@ import { OrbitControls } from "./node_modules/three/examples/jsm/controls/OrbitC
 import { GLTFLoader } from "./node_modules/three/examples/jsm/loaders/GLTFLoader.js";
 import { FBXLoader } from "./node_modules/three/examples/jsm/loaders/FBXLoader.js";
 import { CCDIKSolver } from "./node_modules/three/examples/jsm/animation/CCDIKSolver.js";
-import { MMDLoader } from "./node_modules/three/examples/jsm/loaders/MMDLoader.js"
-
+import { MMDLoader } from "./node_modules/three/examples/jsm/loaders/MMDLoader.js";
 
 // DOM 요소 가져오기
 const videoElement = document.getElementsByClassName("input_video")[0];
@@ -98,9 +97,9 @@ let axis_helpers = [];
 const loader2 = new GLTFLoader();
 const loader = new FBXLoader(); //fbxLoader
 const mmdloader = new MMDLoader();
-loader2.load("../models/gltf/Xbot.glb", function (glb) {
+mmdloader.load("../models/lin/lin.pmd", function (mmd) {
   // 마네킹을 그리는 부분
-  model = glb.scene; // gltf.scene -> GLTF 용
+  model = mmd; // gltf.scene -> GLTF 용
   scene.add(model);
 
   model.scale.multiplyScalar(1); // 모델 전체의 크기 조절
@@ -165,6 +164,8 @@ loader2.load("../models/gltf/Xbot.glb", function (glb) {
 
   // console.log(model.children[0].children[0]);
   ikSolver = new CCDIKSolver(left_mesh, iks_left);
+
+  console.log(bones.map((el) => el.name).join("\n"));
 
   //const animations = gltf.animations;
   //mixer = new THREE.AnimationMixer( model );
@@ -525,7 +526,7 @@ function onResults2(results) {
 
     return pose3dDict;
   }
-  
+
   if (results.poseLandmarks) {
     let pose_landmarks_dict = {};
     results.poseLandmarks.forEach((landmark, i) => {
@@ -741,7 +742,7 @@ function onResults2(results) {
     // TEST------------------------------------------------------------------------------------------------------------------------------------------------
     const R_hips = computeR_hips();
     const Q_hips = new THREE.Quaternion().setFromRotationMatrix(R_hips.clone());
-    const hip_root = skeleton.getBoneByName("mixamorigHips");
+    const hip_root = skeleton.getBoneByName("センター"); /* 엉덩이 */
     //const hip_joint = custom_pos_3d_landmarks["hips"];
     //console.log(hip_root.parent.position);
     //console.log(hip_root.position);
@@ -757,47 +758,49 @@ function onResults2(results) {
     {
       let $chain = Q_hips.clone();
       const Q_spine = computeJointParentQ(
-        "mixamorigSpine1",
-        "$spine1",
+        "首" /* 머리 */,
+        "$neck1",
         "$spine",
         $chain,
         skeleton
       );
-      skeleton.getBoneByName("mixamorigSpine").quaternion.slerp(Q_spine, 0.9);
+      skeleton
+        .getBoneByName("グルーブ")
+        .quaternion.slerp(Q_spine, 0.9); /* 척추? */
       $chain.multiply(Q_spine);
-      
-      const Q_spine1 = computeJointParentQ(
-        "mixamorigSpine2",
-        "$spine2",
-        "$spine1",
-        $chain,
-        skeleton
-      );
-      skeleton.getBoneByName("mixamorigSpine1").quaternion.slerp(Q_spine1, 0.9);
-      $chain.multiply(Q_spine1);
-      
-      const Q_spine2 = computeJointParentQ(
-        "mixamorigNeck",
-        "$neck1",
-        "$spine2",
-        $chain,
-        skeleton
-      );
-      skeleton.getBoneByName("mixamorigSpine2").quaternion.slerp(Q_spine2, 0.9);
-      $chain_spines = $chain.multiply(Q_spine2);
+
+      // const Q_spine1 = computeJointParentQ(
+      //   "mixamorigSpine2",
+      //   "$spine2",
+      //   "$spine1",
+      //   $chain,
+      //   skeleton
+      // );
+      // skeleton.getBoneByName("mixamorigSpine1").quaternion.slerp(Q_spine1, 0.9);
+      // $chain.multiply(Q_spine1);
+
+      // const Q_spine2 = computeJointParentQ(
+      //   "mixamorigNeck",
+      //   "$neck1",
+      //   "$spine2",
+      //   $chain,
+      //   skeleton
+      // );
+      // skeleton.getBoneByName("mixamorigSpine2").quaternion.slerp(Q_spine2, 0.9);
+      $chain_spines = $chain.multiply(Q_spine);
     }
 
     // neck
     {
       let $chain = $chain_spines.clone();
       const Q_neck = computeJointParentQ(
-        "mixamorigHead",
+        "頭" /* 목 */,
         "$neck2",
         "$neck1",
         $chain,
         skeleton
       );
-      skeleton.getBoneByName("mixamorigNeck").quaternion.slerp(Q_neck, 0.9);
+      skeleton.getBoneByName("首").quaternion.slerp(Q_neck, 0.9); /* 머리 */
       $chain.multiply(Q_neck);
     }
 
@@ -805,37 +808,39 @@ function onResults2(results) {
     {
       let $chain = $chain_spines.clone();
       const Q_shoulder_left = computeJointParentQ(
-        "mixamorigLeftArm",
+        "左腕" /* 왼위쪽팔 */,
         "left_shoulder",
         "$left_inner_shoulder",
         $chain,
         skeleton
       );
       skeleton
-        .getBoneByName("mixamorigLeftShoulder")
-        .quaternion.slerp(Q_shoulder_left, 0.9);
+        .getBoneByName("左肩")
+        .quaternion.slerp(Q_shoulder_left, 0.9); /* 왼어깨 */
       $chain.multiply(Q_shoulder_left);
 
       const Q_arm = computeJointParentQ(
-        "mixamorigLeftForeArm",
+        "左ひじ" /* 왼앞팔 */,
         "left_elbow",
         "left_shoulder",
         $chain,
         skeleton
       );
-      skeleton.getBoneByName("mixamorigLeftArm").quaternion.slerp(Q_arm, 0.9);
+      skeleton
+        .getBoneByName("左腕")
+        .quaternion.slerp(Q_arm, 0.9); /* 왼위쪽팔 */
       $chain.multiply(Q_arm);
 
       const Q_forearm = computeJointParentQ(
-        "mixamorigLeftHand",
+        "左手首" /* 왼손목 */,
         "left_wrist",
         "left_elbow",
         $chain,
         skeleton
       );
       skeleton
-        .getBoneByName("mixamorigLeftForeArm")
-        .quaternion.slerp(Q_forearm, 0.9);
+        .getBoneByName("左ひじ")
+        .quaternion.slerp(Q_forearm, 0.9); /* 왼앞팔 */
       $chain.multiply(Q_forearm);
 
       if (results.leftHandLandmarks) {
@@ -878,35 +883,35 @@ function onResults2(results) {
         //console.log(skeleton.getBoneByName("mixamorigLeftHand"));
 
         const Q_hand_thumb = computeJointParentQ(
-          "mixamorigLeftHandThumb1",
+          "左親指１" /* 엄지 */,
           "LEFT_THUMB_CMC",
           "left_wrist",
           $chain,
           skeleton
         );
         const Q_hand_index = computeJointParentQ(
-          "mixamorigLeftHandIndex1",
+          "左人指１" /* 검지 */,
           "LEFT_INDEX_FINGER_MCP",
           "left_wrist",
           $chain,
           skeleton
         );
         const Q_hand_middle = computeJointParentQ(
-          "mixamorigLeftHandMiddle1",
+          "左中指１" /* 중지 */,
           "LEFT_MIDDLE_FINGER_MCP",
           "left_wrist",
           $chain,
           skeleton
         );
         const Q_hand_ring = computeJointParentQ(
-          "mixamorigLeftHandRing1",
+          "左薬指１" /* 약지 */,
           "LEFT_RING_FINGER_MCP",
           "left_wrist",
           $chain,
           skeleton
         );
         const Q_hand_pinky = computeJointParentQ(
-          "mixamorigLeftHandPinky1",
+          "左小指１" /* 소지 */,
           "LEFT_PINKY_MCP",
           "left_wrist",
           $chain,
@@ -919,9 +924,7 @@ function onResults2(results) {
           0.5
         );
 
-        skeleton
-          .getBoneByName("mixamorigLeftHand")
-          .quaternion.slerp(Q_hand, 0.9);
+        skeleton.getBoneByName("左手首").quaternion.slerp(Q_hand, 0.9);
       }
     }
 
@@ -929,124 +932,130 @@ function onResults2(results) {
     {
       let $chain = $chain_spines.clone();
       const Q_shoulder_right = computeJointParentQ(
-        "mixamorigRightArm",
+        "右腕" /* 오른위쪽팔 */,
         "right_shoulder",
         "$right_inner_shoulder",
         $chain,
         skeleton
       );
       skeleton
-        .getBoneByName("mixamorigRightShoulder")
-        .quaternion.slerp(Q_shoulder_right, 0.9);
+        .getBoneByName("右肩")
+        .quaternion.slerp(Q_shoulder_right, 0.9); /* 오른어깨 */
       $chain.multiply(Q_shoulder_right);
 
       const Q_arm = computeJointParentQ(
-        "mixamorigRightForeArm",
+        "右ひじ" /* 오른앞팔 */,
         "right_elbow",
         "right_shoulder",
         $chain,
         skeleton
       );
-      skeleton.getBoneByName("mixamorigRightArm").quaternion.slerp(Q_arm, 0.9);
+      skeleton
+        .getBoneByName("右腕")
+        .quaternion.slerp(Q_arm, 0.9); /* 오른위쪽팔 */
       $chain.multiply(Q_arm);
 
       const Q_forearm = computeJointParentQ(
-        "mixamorigRightHand",
+        "右手首" /* 오른손목 */,
         "right_wrist",
         "right_elbow",
         $chain,
         skeleton
       );
       skeleton
-        .getBoneByName("mixamorigRightForeArm")
-        .quaternion.slerp(Q_forearm, 0.9);
+        .getBoneByName("右ひじ")
+        .quaternion.slerp(Q_forearm, 0.9); /* 오른앞팔 */
       $chain.multiply(Q_forearm);
 
       const Q_hand = computeJointParentQ(
-        "mixamorigRightHandIndex1",
+        "右人指１" /* 오른검지 */,
         "right_index",
         "right_wrist",
         $chain,
         skeleton
       );
       skeleton
-        .getBoneByName("mixamorigRightHand")
-        .quaternion.slerp(Q_hand, 0.9);
+        .getBoneByName("右手首")
+        .quaternion.slerp(Q_hand, 0.9); /* 오른손목 */
     }
 
     // left legs
     {
       let $chain = Q_hips.clone();
       const Q_upLeg = computeJointParentQ(
-        "mixamorigLeftLeg",
+        "左ひざ" /* 왼무릎 */,
         "left_knee",
         "left_hip",
         $chain,
         skeleton
       );
       skeleton
-        .getBoneByName("mixamorigLeftUpLeg")
-        .quaternion.slerp(Q_upLeg, 0.9);
+        .getBoneByName("左足")
+        .quaternion.slerp(Q_upLeg, 0.9); /* 왼허벅지 */
       $chain = $chain.multiply(Q_upLeg);
 
       const Q_leg = computeJointParentQ(
-        "mixamorigLeftFoot",
+        "左足首" /* 왼발목 */,
         "left_ankle",
         "left_knee",
         $chain,
         skeleton
       );
-      skeleton.getBoneByName("mixamorigLeftLeg").quaternion.slerp(Q_leg, 0.9);
+      skeleton
+        .getBoneByName("左ひざ")
+        .quaternion.slerp(Q_leg, 0.9); /* 왼무릎 */
 
       $chain = $chain.multiply(Q_leg);
       const Q_foot = computeJointParentQ(
-        "mixamorigLeftToeBase",
+        "左つま先" /* 왼발끝 */,
         "left_foot_index",
         "left_ankle",
         $chain,
         skeleton
       );
-      skeleton.getBoneByName("mixamorigLeftFoot").quaternion.slerp(Q_foot, 0.9);
+      skeleton
+        .getBoneByName("左足首")
+        .quaternion.slerp(Q_foot, 0.9); /* 왼발목 */
     }
 
     // right legs
     {
       let $chain = Q_hips.clone();
       const Q_upLeg = computeJointParentQ(
-        "mixamorigRightLeg",
+        "右ひざ" /* 오른무릎 */,
         "right_knee",
         "right_hip",
         $chain,
         skeleton
       );
       skeleton
-        .getBoneByName("mixamorigRightUpLeg")
-        .quaternion.slerp(Q_upLeg, 0.9);
+        .getBoneByName("右足")
+        .quaternion.slerp(Q_upLeg, 0.9); /* 오른허벅지 */
       $chain = $chain.multiply(Q_upLeg);
 
       const Q_leg = computeJointParentQ(
-        "mixamorigRightFoot",
+        "右足首" /* 오른발목 */,
         "right_ankle",
         "right_knee",
         $chain,
         skeleton
       );
-      skeleton.getBoneByName("mixamorigRightLeg").quaternion.slerp(Q_leg, 0.9);
+      skeleton
+        .getBoneByName("右ひざ")
+        .quaternion.slerp(Q_leg, 0.9); /* 오른무릎 */
 
       $chain = $chain.multiply(Q_leg);
       const Q_foot = computeJointParentQ(
-        "mixamorigRightToeBase",
+        "右つま先" /* 오른발끝 */,
         "right_foot_index",
         "right_ankle",
         $chain,
         skeleton
       );
       skeleton
-        .getBoneByName("mixamorigRightFoot")
-        .quaternion.slerp(Q_foot, 0.9);
+        .getBoneByName("右足首")
+        .quaternion.slerp(Q_foot, 0.9); /* 오른발목 */
     }
-    
-
 
     // TEST------------------------------------------------------------------------------------------------------------------------------------------------
     // 루트부터 싹 새롭게 설정하지 않았음 : 어깨의 상대적인 위치만 설정해주겠다 ( 어깨를 임시적인 루트로 정의하고 진행 )
@@ -1054,7 +1063,6 @@ function onResults2(results) {
 
     // 하위 부분 움직이도록 만들기
 
-    
     // let jointLeftWrist = pos_3d_landmarks["left_wrist"]; // p2
     // let boneLeftHand = skeleton.getBoneByName("mixamorigLeftHand"); // j2
     // let v12 = new THREE.Vector3()
@@ -1064,7 +1072,7 @@ function onResults2(results) {
     // let Rv12 = v12.clone().applyMatrix4(R0.clone().transpose()); // R0 의 역행렬으로부터 -> transpose()
     // let R1 = computeR(j2, Rv12);
     // skeleton.getBoneByName("mixamorigLeftForeArm").setRotationFromMatrix(R1); // setRotationFromQuaternion() 사용 권장
-    
+
     // console.log(boneLeftArm);
 
     // console.log(skeleton);
@@ -1103,7 +1111,7 @@ async function detectionFrame() {
   videoElement.requestVideoFrameCallback(detectionFrame);
 }
 
-// detectionFrame();
+detectionFrame();
 
 const camera = new Camera(videoElement, {
   onFrame: async () => {
@@ -1113,4 +1121,4 @@ const camera = new Camera(videoElement, {
   height: 720,
 });
 
-camera.start();
+// camera.start();
