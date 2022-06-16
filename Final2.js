@@ -99,7 +99,7 @@ loader2.load("../models/gltf/Xbot.glb", function (glb) {
   // 마네킹을 그리는 부분
   model = glb.scene; // gltf.scene -> GLTF 용
   scene.add(model);
-
+  console.log(glb);
   model.scale.multiplyScalar(1); // 모델 전체의 크기 조절
 
   let bones = [];
@@ -753,56 +753,64 @@ function onResults2(results) {
 
     let $chain_spines;
     */
-   //console.log(skeleton.getBoneByName("mixamorigLeftHand"));
-   if(results.leftHandLandmarks){
-   let jointLeftWrist = total_pos_3d_landmarks["LEFT_WRIST"];
-    let jointLeftThumb1 = total_pos_3d_landmarks["LEFT_THUMB_CMC"];
-    let jointLeftIndex1 = total_pos_3d_landmarks["LEFT_INDEX_FINGER_MCP"];
-    let jointLeftMiddle1 = total_pos_3d_landmarks["LEFT_MIDDLE_FINGER_MCP"];
-    let jointLeftRing1 = total_pos_3d_landmarks["LEFT_RING_FINGER_MCP"];
-    let jointLeftPinky1 = total_pos_3d_landmarks["LEFT_PINKY_MCP"];
+    //console.log(skeleton.getBoneByName("mixamorigLeftHand"));
+    if (results.leftHandLandmarks) {
+      let jointLeftWrist = total_pos_3d_landmarks["LEFT_WRIST"];
+      let jointLeftThumb1 = total_pos_3d_landmarks["LEFT_THUMB_CMC"];
+      let jointLeftIndex1 = total_pos_3d_landmarks["LEFT_INDEX_FINGER_MCP"];
+      let jointLeftMiddle1 = total_pos_3d_landmarks["LEFT_MIDDLE_FINGER_MCP"];
+      let jointLeftRing1 = total_pos_3d_landmarks["LEFT_RING_FINGER_MCP"];
+      let jointLeftPinky1 = total_pos_3d_landmarks["LEFT_PINKY_MCP"];
 
-    let v_wrist_to_thumb1 = new THREE.Vector3()
+      let v_wrist_to_thumb1 = new THREE.Vector3()
         .subVectors(jointLeftThumb1, jointLeftWrist)
         .normalize();
-    let v_writst_to_pinky1 = new THREE.Vector3()
+      let v_writst_to_pinky1 = new THREE.Vector3()
         .subVectors(jointLeftPinky1, jointLeftWrist)
         .normalize();
-    let wrist_to_middle1 = new THREE.Vector3()
-    .subVectors(jointLeftMiddle1, jointLeftWrist)
-    .normalize();
+      let wrist_to_middle1 = new THREE.Vector3()
+        .subVectors(jointLeftMiddle1, jointLeftWrist)
+        .normalize();
 
-    let u = new THREE.Vector3().copy(v_wrist_to_thumb1);
-    let v = new THREE.Vector3().copy(wrist_to_middle1);
-    let w = new THREE.Vector3().crossVectors(u,v).normalize();
-    let new_u = new THREE.Vector3().crossVectors(v,w).normalize();
-    
-    const R = new THREE.Matrix4().makeBasis(v, w, new_u);
-    let q_hips = skeleton.getBoneByName("mixamorigHips").quaternion.clone();
-    let q_spine = skeleton.getBoneByName("mixamorigSpine").quaternion.clone();
-    let q_spine1 = skeleton.getBoneByName("mixamorigSpine1").quaternion.clone();
-    let q_spine2 = skeleton.getBoneByName("mixamorigSpine2").quaternion.clone();
-    let q_leftshoulder = skeleton.getBoneByName("mixamorigLeftShoulder").quaternion.clone();
-    let q_leftarm = skeleton.getBoneByName("mixamorigLeftArm").quaternion.clone();
-    let q_leftforearm = skeleton.getBoneByName("mixamorigLeftForeArm").quaternion.clone();
-    q_hips.multiply(q_spine);
-    q_hips.multiply(q_spine1);
-    q_hips.multiply(q_spine2);
-    q_hips.multiply(q_leftshoulder);
-    q_hips.multiply(q_leftarm);
-    q_hips.multiply(q_leftforearm);
-    q_hips = q_hips.conjugate();
-    // let temp_chain = new THREE.Matrix4().makeRotationFromQuaternion($chain);
-    //const new_R = R.clone().premultiply(temp_chain.transpose());
-    const new_Q = new THREE.Quaternion().setFromRotationMatrix(R);
-    //new_Q.multiply(q_hips);
-    skeleton.getBoneByName("mixamorigLeftHand").quaternion.slerp(new_Q,0.9);
-    // const skeleton_quaternion = new THREE.Quaternion();
-    // skeleton.getBoneByName("mixamorigLeftHand").getWorldQuaternion(skeleton_quaternion);
-    // const quaternion_angle = skeleton_quaternion.angleTo(new_Q);
+      let u = new THREE.Vector3().copy(v_wrist_to_thumb1);
+      let v = new THREE.Vector3().copy(wrist_to_middle1);
+      let w = new THREE.Vector3().crossVectors(u, v).normalize();
+      let new_u = new THREE.Vector3().crossVectors(v, w).normalize();
 
-
-   }
+      const R = new THREE.Matrix4().makeBasis(v, w, new_u);
+      let q_hips = skeleton.getBoneByName("mixamorigHips").quaternion.clone();
+      let q_spine = skeleton.getBoneByName("mixamorigSpine").quaternion.clone();
+      let q_spine1 = skeleton
+        .getBoneByName("mixamorigSpine1")
+        .quaternion.clone();
+      let q_spine2 = skeleton
+        .getBoneByName("mixamorigSpine2")
+        .quaternion.clone();
+      let q_leftshoulder = skeleton
+        .getBoneByName("mixamorigLeftShoulder")
+        .quaternion.clone();
+      let q_leftarm = skeleton
+        .getBoneByName("mixamorigLeftArm")
+        .quaternion.clone();
+      let q_leftforearm = skeleton
+        .getBoneByName("mixamorigLeftForeArm")
+        .quaternion.clone();
+      q_hips.multiply(q_spine);
+      q_hips.multiply(q_spine1);
+      q_hips.multiply(q_spine2);
+      q_hips.multiply(q_leftshoulder);
+      q_hips.multiply(q_leftarm);
+      q_hips.multiply(q_leftforearm);
+      q_hips = q_hips.conjugate();
+      // let temp_chain = new THREE.Matrix4().makeRotationFromQuaternion($chain);
+      //const new_R = R.clone().premultiply(temp_chain.transpose());
+      const new_Q = new THREE.Quaternion().setFromRotationMatrix(R);
+      //new_Q.multiply(q_hips);
+      skeleton.getBoneByName("mixamorigLeftHand").quaternion.slerp(new_Q, 0.9);
+      // const skeleton_quaternion = new THREE.Quaternion();
+      // skeleton.getBoneByName("mixamorigLeftHand").getWorldQuaternion(skeleton_quaternion);
+      // const quaternion_angle = skeleton_quaternion.angleTo(new_Q);
+    }
     /*
     // spine
     {
