@@ -5,7 +5,6 @@ import { FBXLoader } from "./node_modules/three/examples/jsm/loaders/FBXLoader.j
 import { CCDIKSolver } from "./node_modules/three/examples/jsm/animation/CCDIKSolver.js";
 import { MMDLoader } from "./node_modules/three/examples/jsm/loaders/MMDLoader.js";
 import { MMDPhysics } from "./node_modules/three/examples/jsm/animation/MMDPhysics.js";
-import { MMDAnimationHelper } from "./node_modules/three/examples/jsm/animation/MMDAnimationHelper.js";
 
 // DOM 요소 가져오기
 const videoElement = document.getElementsByClassName("input_video")[0];
@@ -93,22 +92,21 @@ let ikSolver_right;
 let ikSolver_left_foot;
 let ikSolver_right_foot;
 
-let physics;
 let helper = new MMDAnimationHelper({
   afterglow: 2.0,
 });
-
-const clock = new THREE.Clock();
 
 let model,
   skeleton = null,
   skeleton_helper,
   mixer,
   numAnimations;
+let physics;
 let axis_helpers = [];
 const loader2 = new GLTFLoader();
 const loader = new FBXLoader(); //fbxLoader
 const mmdloader = new MMDLoader();
+const clock = new THREE.Clock();
 mmdloader.load("../models/lin/lin.pmd", function (mmd) {
   // 마네킹을 그리는 부분
   model = mmd; // gltf.scene -> GLTF 용
@@ -119,17 +117,16 @@ mmdloader.load("../models/lin/lin.pmd", function (mmd) {
   });
   scene.add(model);
 
-  let ikHelper = helper.objects.get(model).ikSolver.createHelper();
-  ikHelper.visible = true;
-  scene.add(ikHelper);
-
-  let physicsHelper = helper.objects.get(model).physics.createHelper();
-  physicsHelper.visible = true;
-  scene.add(physicsHelper);
-  // physics = new MMDPhysics(model);
-
-  model.scale.multiplyScalar(1); // 모델 전체의 크기 조절
-
+  model.scale.multiplyScalar(0.1); // 모델 전체의 크기 조절
+  console.log(model);
+  physics = new MMDPhysics(
+    model,
+    model.geometry.userData.MMD.rigidBodies,
+    model.geometry.userData.MMD.constraints
+  );
+  physics.setGravity(new THREE.Vector3(0, 10, 0));
+  //physics.update();
+  console.log(physics);
   let bones = [];
 
   let char_mesh = null;
@@ -787,42 +784,40 @@ function onResults2(results) {
     // skeleton.getBoneByName("mixamorigLeftArm").setRotationFromMatrix(R0); // Matrix4 로 설정
 
     // TEST------------------------------------------------------------------------------------------------------------------------------------------------
-    // if (results.leftHandLandmarks) {
-    //   let jointLeftWrist = total_pos_3d_landmarks["LEFT_WRIST"];
-    //   let jointLeftThumb1 = total_pos_3d_landmarks["LEFT_THUMB_CMC"];
-    //   let jointLeftIndex1 = total_pos_3d_landmarks["LEFT_INDEX_FINGER_MCP"];
-    //   let jointLeftMiddle1 = total_pos_3d_landmarks["LEFT_MIDDLE_FINGER_MCP"];
-    //   let jointLeftRing1 = total_pos_3d_landmarks["LEFT_RING_FINGER_MCP"];
-    //   let jointLeftPinky1 = total_pos_3d_landmarks["LEFT_PINKY_MCP"];
-    //   let jointLeftElbow = total_pos_3d_landmarks["left_elbow"];
+    /*if(results.leftHandLandmarks){
+      let jointLeftWrist = total_pos_3d_landmarks["LEFT_WRIST"];
+       let jointLeftThumb1 = total_pos_3d_landmarks["LEFT_THUMB_CMC"];
+       let jointLeftIndex1 = total_pos_3d_landmarks["LEFT_INDEX_FINGER_MCP"];
+       let jointLeftMiddle1 = total_pos_3d_landmarks["LEFT_MIDDLE_FINGER_MCP"];
+       let jointLeftRing1 = total_pos_3d_landmarks["LEFT_RING_FINGER_MCP"];
+       let jointLeftPinky1 = total_pos_3d_landmarks["LEFT_PINKY_MCP"];
+      let jointLeftElbow =  total_pos_3d_landmarks["left_elbow"];
 
-    //   let v_elbow_to_wrist = new THREE.Vector3()
-    //     .subVectors(jointLeftWrist, jointLeftElbow)
-    //     .normalize();
-
-    //   let v12 = new THREE.Vector3();
-    //   let v_wrist_to_thumb1 = new THREE.Vector3()
-    //     .subVectors(jointLeftThumb1, jointLeftWrist)
-    //     .normalize();
-    //   let v_writst_to_pinky1 = new THREE.Vector3()
-    //     .subVectors(jointLeftPinky1, jointLeftWrist)
-    //     .normalize();
-    //   let wrist_to_middle1 = new THREE.Vector3()
-    //     .subVectors(jointLeftMiddle1, jointLeftWrist)
-    //     .normalize();
-
-    //   let u = new THREE.Vector3().copy(v_wrist_to_thumb1);
-    //   let v = new THREE.Vector3().copy(wrist_to_middle1);
-    //   let w = new THREE.Vector3().crossVectors(u, v).normalize();
-    //   let new_u = new THREE.Vector3().crossVectors(v, w).normalize();
-    //   console.log(new_u, v, w);
-    //   const R = new THREE.Matrix4().makeBasis(v, w, new_u);
-    //   //const new_Q = new THREE.Quaternion().setFromRotationMatrix(R);
-    //   //skeleton.getBoneByName("左手首").quaternion.slerp(new_Q,0.9);
-    //   skeleton.getBoneByName("左手首").matrixAutoUpdate = false;
-    //   skeleton.getBoneByName("左手首").matrix.set(R);
-    //   skeleton.getBoneByName("左手首").matrix.needsUpdate = true;
-    // }
+      let v_elbow_to_wrist = new THREE.Vector3().subVectors(jointLeftWrist,jointLeftElbow).normalize();
+      
+      let v12 = new THREE.Vector3()
+       let v_wrist_to_thumb1 = new THREE.Vector3()
+           .subVectors(jointLeftThumb1, jointLeftWrist)
+           .normalize();
+       let v_writst_to_pinky1 = new THREE.Vector3()
+           .subVectors(jointLeftPinky1, jointLeftWrist)
+           .normalize();
+       let wrist_to_middle1 = new THREE.Vector3()
+       .subVectors(jointLeftMiddle1, jointLeftWrist)
+       .normalize();
+   
+       let u = new THREE.Vector3().copy(v_wrist_to_thumb1);
+       let v = new THREE.Vector3().copy(wrist_to_middle1);
+       let w = new THREE.Vector3().crossVectors(u,v).normalize();
+       let new_u = new THREE.Vector3().crossVectors(v,w).normalize();
+       console.log(new_u,v,w);
+       const R = new THREE.Matrix4().makeBasis(v, w, new_u);
+       //const new_Q = new THREE.Quaternion().setFromRotationMatrix(R);
+       //skeleton.getBoneByName("左手首").quaternion.slerp(new_Q,0.9);
+       skeleton.getBoneByName("左手首").matrixAutoUpdate = false;
+       skeleton.getBoneByName("左手首").matrix.set(R);
+       skeleton.getBoneByName("左手首").matrix.needsUpdate = true;
+    }*/
 
     const R_hips = computeR_hips();
     const Q_hips = new THREE.Quaternion().setFromRotationMatrix(R_hips.clone());
@@ -1159,9 +1154,7 @@ function onResults2(results) {
   //ikSolver_left_foot?.update();
   //ikSolver_right_foot?.update();
   const delta = clock.getDelta();
-  // animate(delta); // update bones
-  if (physics !== undefined) physics.update(delta);
-  if (helper !== undefined) helper.update(delta);
+  physics.update(delta);
   renderer.render(scene, camera_ar);
   canvasCtx.restore();
 }
@@ -1201,4 +1194,4 @@ const camera = new Camera(videoElement, {
   height: 720,
 });
 
-// camera.start();
+//camera.start();

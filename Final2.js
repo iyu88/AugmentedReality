@@ -99,7 +99,7 @@ loader2.load("../models/gltf/Xbot.glb", function (glb) {
   // 마네킹을 그리는 부분
   model = glb.scene; // gltf.scene -> GLTF 용
   scene.add(model);
-
+  console.log(glb);
   model.scale.multiplyScalar(1); // 모델 전체의 크기 조절
 
   let bones = [];
