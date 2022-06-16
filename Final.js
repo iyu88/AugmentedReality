@@ -4,6 +4,8 @@ import { GLTFLoader } from "./node_modules/three/examples/jsm/loaders/GLTFLoader
 import { FBXLoader } from "./node_modules/three/examples/jsm/loaders/FBXLoader.js";
 import { CCDIKSolver } from "./node_modules/three/examples/jsm/animation/CCDIKSolver.js";
 import { MMDLoader } from "./node_modules/three/examples/jsm/loaders/MMDLoader.js";
+import { MMDPhysics } from "./node_modules/three/examples/jsm/animation/MMDPhysics.js";
+
 
 // DOM 요소 가져오기
 const videoElement = document.getElementsByClassName("input_video")[0];
@@ -96,17 +98,23 @@ let model,
   skeleton_helper,
   mixer,
   numAnimations;
+let physics;
 let axis_helpers = [];
 const loader2 = new GLTFLoader();
 const loader = new FBXLoader(); //fbxLoader
 const mmdloader = new MMDLoader();
+const clock = new THREE.Clock();
 mmdloader.load("../models/lin/lin.pmd", function (mmd) {
   // 마네킹을 그리는 부분
   model = mmd; // gltf.scene -> GLTF 용
   scene.add(model);
 
   model.scale.multiplyScalar(0.1); // 모델 전체의 크기 조절
-
+  console.log(model);
+  physics = new MMDPhysics(model,model.geometry.userData.MMD.rigidBodies,model.geometry.userData.MMD.constraints);
+  physics.setGravity(new THREE.Vector3(0,10,0));
+  //physics.update();
+  console.log(physics);
   let bones = [];
 
   let char_mesh = null;
@@ -764,7 +772,7 @@ function onResults2(results) {
     // skeleton.getBoneByName("mixamorigLeftArm").setRotationFromMatrix(R0); // Matrix4 로 설정
     
     // TEST------------------------------------------------------------------------------------------------------------------------------------------------
-    if(results.leftHandLandmarks){
+    /*if(results.leftHandLandmarks){
       let jointLeftWrist = total_pos_3d_landmarks["LEFT_WRIST"];
        let jointLeftThumb1 = total_pos_3d_landmarks["LEFT_THUMB_CMC"];
        let jointLeftIndex1 = total_pos_3d_landmarks["LEFT_INDEX_FINGER_MCP"];
@@ -797,9 +805,9 @@ function onResults2(results) {
        skeleton.getBoneByName("左手首").matrixAutoUpdate = false;
        skeleton.getBoneByName("左手首").matrix.set(R);
        skeleton.getBoneByName("左手首").matrix.needsUpdate = true;
-    }
+    }*/
     
-    /*
+    
     const R_hips = computeR_hips();
     const Q_hips = new THREE.Quaternion().setFromRotationMatrix(R_hips.clone());
     const hip_root = skeleton.getBoneByName("センター"); //엉덩이
@@ -1153,13 +1161,15 @@ function onResults2(results) {
     // 갈라지는 곳에서는 두 개의 Rotation Matrix 가 나올 수 있고, Rotation 의 Interpolation 을 위해서 Quaternion 사용
     // 랜드마크 + 홀리스틱 ( 손가락 관절 ) + IK Solver ( 바닥에 붙이기 - 타켓 포지션에 적용 ) + Physics ( Skin Mesh 에 대해서 충돌 피직스 설정 - 충돌 일어나지 않도록 )
   
-  */
+  
   }
 
   //ikSolver_left?.update();
   //ikSolver_right?.update();
   //ikSolver_left_foot?.update();
   //ikSolver_right_foot?.update();
+  const delta = clock.getDelta();
+  physics.update(delta);
   renderer.render(scene, camera_ar);
   canvasCtx.restore();
 }
@@ -1189,7 +1199,7 @@ async function detectionFrame() {
   videoElement.requestVideoFrameCallback(detectionFrame);
 }
 
-//detectionFrame();
+detectionFrame();
 
 const camera = new Camera(videoElement, {
   onFrame: async () => {
@@ -1199,4 +1209,4 @@ const camera = new Camera(videoElement, {
   height: 720,
 });
 
-camera.start();
+//camera.start();
