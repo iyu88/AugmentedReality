@@ -23,6 +23,7 @@
     "@mediapipe/drawing_utils": "^0.3.1620248257",
     "@mediapipe/face_mesh": "^0.4.1633559619",
     "@mediapipe/holistic": "^0.5.1635989137",
+    "cannon": "^0.6.2",
     "express": "^4.17.3",
     "three": "^0.138.3"
   },

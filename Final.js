@@ -5,6 +5,7 @@ import { FBXLoader } from "./node_modules/three/examples/jsm/loaders/FBXLoader.j
 import { CCDIKSolver } from "./node_modules/three/examples/jsm/animation/CCDIKSolver.js";
 import { MMDLoader } from "./node_modules/three/examples/jsm/loaders/MMDLoader.js";
 import { MMDPhysics } from "./node_modules/three/examples/jsm/animation/MMDPhysics.js";
+//import * as CANNON from './node_modules/cannon/build/cannon.js';
 
 // DOM 요소 가져오기
 const videoElement = document.getElementsByClassName("input_video")[0];
@@ -103,6 +104,7 @@ const loader2 = new GLTFLoader();
 const loader = new FBXLoader(); //fbxLoader
 const mmdloader = new MMDLoader();
 const clock = new THREE.Clock();
+let oldElapsedTime = 0;
 mmdloader.load("../models/lin/lin.pmd", function (mmd) {
   // 마네킹을 그리는 부분
   model = mmd; // gltf.scene -> GLTF 용
@@ -110,12 +112,8 @@ mmdloader.load("../models/lin/lin.pmd", function (mmd) {
 
   model.scale.multiplyScalar(0.1); // 모델 전체의 크기 조절
   console.log(model);
-  physics = new MMDPhysics(
-    model,
-    model.geometry.userData.MMD.rigidBodies,
-    model.geometry.userData.MMD.constraints
-  );
-  physics.setGravity(new THREE.Vector3(0, 10, 0));
+  physics = new MMDPhysics(model,model.geometry.userData.MMD.rigidBodies,model.geometry.userData.MMD.constraints);
+  physics.setGravity(new THREE.Vector3(0,10,0));
   //physics.update();
   console.log(physics);
   let bones = [];
@@ -253,9 +251,9 @@ let hand_name_to_index = {
   THUMB_MCP: 2,
   THUMB_IP: 3,
   THUMB_TIP: 4,
-  INDEX_FINGER_MCP: 6,
-  INDEX_FINGER_PIP: 7,
-  INDEX_FINGER_DIP: 8,
+  INDEX_FINGER_MCP: 5,
+  INDEX_FINGER_PIP: 6,
+  INDEX_FINGER_DIP: 7,
   INDEX_FINGER_TIP: 8,
   MIDDLE_FINGER_MCP: 9,
   MIDDLE_FINGER_PIP: 10,
@@ -339,6 +337,42 @@ hand_points.geometry.setAttribute(
 );
 scene.add(hand_points);
 
+const world = new CANNON.World(); //  Physics               !!!!!!!!
+world.gravity.set(0, -9.82*10, 0);
+
+const floorShape = new CANNON.Plane();
+const floorBody = new CANNON.Body();
+floorBody.mass = 0;
+floorBody.addShape(floorShape);
+world.addBody(floorBody);
+floorBody.quaternion.setFromAxisAngle(new CANNON.Vec3(- 1, 0, 0), Math.PI * 0.5) 
+
+const sphereShape = new CANNON.Sphere(0.5); // BONE Physics
+const sphereBody = new CANNON.Body({
+  mass: 1,
+  position: new CANNON.Vec3(0, 3, 0),
+  shape: sphereShape,
+});
+world.addBody(sphereBody);
+
+const cannon_tick = (bone) => // Apply physics
+{
+    const elapsedTime = clock.getElapsedTime()
+    const deltaTime = elapsedTime - oldElapsedTime
+    oldElapsedTime = elapsedTime
+
+    // Update physics
+    world.step(1 / 60, deltaTime, 3)
+    // step은 업데이트 해주는 메소드
+    //console.log(sphereBody.position.y)
+  
+    // cannon.js world에 있는 값으로 Three.js의 sphere 값을 업데이트
+    // sphere.position.x = sphereBody.position.x
+    // sphere.position.y = sphereBody.position.y
+    // sphere.position.z = sphereBody.position.z
+  
+    bone.position.copy(sphereBody.position)
+}
 // const righthand_points = new THREE.Points(
 //   new THREE.BufferGeometry(),
 //   new THREE.PointsMaterial({
@@ -748,79 +782,11 @@ function onResults2(results) {
       righthand_3d_landmarks
     );
 
-    // rigging //
-    // mixamorigLeftArm : left_shoulder
-    // mixamorigLeftForeArm : left_elbow
-    // mixamorigLeftHand : left_wrist
-    // 조인트의 Rotation 을 구하기 위해서는 조인트와 그 자식의 조인트를 알아야 함
-    // 미디어파이프에서 받아낸 랜드마크는 손 마디가 정확하지 않음 VS 모델의 rig 는 손 마디가 정확함
-    // => 인터폴레이션하여 캐릭터에 맞추기 VS IK Solver VS Hand Tracking ( Holistic - 자세와 손을 모두 사용하기 위해서 )
-    // 조인트의 오프셋 정보는 항상 일정하게 정의되어 있다. ( position 속성 ) -> 식에서 J가 됨
-
-    // joint 는 미디어파이프 상, bone 은 threejs 상
-    // joint 사이의 거리와 bone 사이의 거리는 다름 : 각도를 갖고 위치를 설정할 것이므로 방향 자체는 랜드마크의 벡터로 가져올 수 있음
-    // -> 거리는 랜드마크에서 벡터로 구한 것과는 다름 : 수식에서 오프셋과 벡터는 같기 때문에 방향은 정규화된 방향을 사용할 수 있음
-
-    // let jointLeftShoulder = pos_3d_landmarks["left_shoulder"]; // p0 -> 부모
-    // let jointLeftElbow = pos_3d_landmarks["left_elbow"]; // p1 -> 자식
-    // let boneLeftForeArm = skeleton.getBoneByName("mixamorigLeftForeArm"); // j1
-
-    // let v01 = new THREE.Vector3()
-    //   .subVectors(jointLeftElbow, jointLeftShoulder) // 0 에서 1 을 뺀다 ( 순서는 1 다음 0 )
-    //   .normalize(); // 정규화하여 유닛 벡터를 구함
-    // let j1 = boneLeftForeArm.position.clone().normalize(); // 팔꿈치 위치 정규화
-    // // j1 을 v01 로 가져감 ( Rotation 을 구하는 함수는 정의되어 있음 - computeR )
-    // let R0 = computeR(j1, v01); // LeftArm 의 Rotation Vector 를 구할 수 있음 ( 앞의 녀석을 뒤의 녀석으로 만들어주는 매트릭스를 계산 )
-    // // 로컬 트랜스폼을 변경해줌
-    // skeleton.getBoneByName("mixamorigLeftArm").setRotationFromMatrix(R0); // Matrix4 로 설정
-
-    // TEST------------------------------------------------------------------------------------------------------------------------------------------------
-    /*if(results.leftHandLandmarks){
-      let jointLeftWrist = total_pos_3d_landmarks["LEFT_WRIST"];
-       let jointLeftThumb1 = total_pos_3d_landmarks["LEFT_THUMB_CMC"];
-       let jointLeftIndex1 = total_pos_3d_landmarks["LEFT_INDEX_FINGER_MCP"];
-       let jointLeftMiddle1 = total_pos_3d_landmarks["LEFT_MIDDLE_FINGER_MCP"];
-       let jointLeftRing1 = total_pos_3d_landmarks["LEFT_RING_FINGER_MCP"];
-       let jointLeftPinky1 = total_pos_3d_landmarks["LEFT_PINKY_MCP"];
-      let jointLeftElbow =  total_pos_3d_landmarks["left_elbow"];
-
-      let v_elbow_to_wrist = new THREE.Vector3().subVectors(jointLeftWrist,jointLeftElbow).normalize();
-      
-      let v12 = new THREE.Vector3()
-       let v_wrist_to_thumb1 = new THREE.Vector3()
-           .subVectors(jointLeftThumb1, jointLeftWrist)
-           .normalize();
-       let v_writst_to_pinky1 = new THREE.Vector3()
-           .subVectors(jointLeftPinky1, jointLeftWrist)
-           .normalize();
-       let wrist_to_middle1 = new THREE.Vector3()
-       .subVectors(jointLeftMiddle1, jointLeftWrist)
-       .normalize();
-   
-       let u = new THREE.Vector3().copy(v_wrist_to_thumb1);
-       let v = new THREE.Vector3().copy(wrist_to_middle1);
-       let w = new THREE.Vector3().crossVectors(u,v).normalize();
-       let new_u = new THREE.Vector3().crossVectors(v,w).normalize();
-       console.log(new_u,v,w);
-       const R = new THREE.Matrix4().makeBasis(v, w, new_u);
-       //const new_Q = new THREE.Quaternion().setFromRotationMatrix(R);
-       //skeleton.getBoneByName("左手首").quaternion.slerp(new_Q,0.9);
-       skeleton.getBoneByName("左手首").matrixAutoUpdate = false;
-       skeleton.getBoneByName("左手首").matrix.set(R);
-       skeleton.getBoneByName("左手首").matrix.needsUpdate = true;
-    }*/
-
+        
     const R_hips = computeR_hips();
     const Q_hips = new THREE.Quaternion().setFromRotationMatrix(R_hips.clone());
     const hip_root = skeleton.getBoneByName("センター"); //엉덩이
-    //const hip_joint = custom_pos_3d_landmarks["hips"];
-    //console.log(hip_root.parent.position);
-    //console.log(hip_root.position);
-    ///////////////////////////////////hip_root.position.set(0, 0, 0);
-    //const character_scale = hip_root.parent.scale;
-    //hip_root.position.set(hip_joint.x / character_scale.x, hip_joint.y / character_scale.x, hip_joint.z / character_scale.x);
     hip_root.quaternion.slerp(Q_hips, 0.9);
-    //const RootQuaternion_hip = new THREE.Quaternion().copy(hip_root.quaternion);
 
     let $chain_spines;
 
@@ -828,33 +794,17 @@ function onResults2(results) {
     {
       let $chain = Q_hips.clone();
       const Q_spine = computeJointParentQ(
-        "首", // 머리
+        "首", // 머리 
         "$neck1",
         "$spine",
         $chain,
         skeleton
       );
-      skeleton.getBoneByName("グルーブ").quaternion.slerp(Q_spine, 0.9); //척추?
+      skeleton
+        .getBoneByName("グルーブ")
+        .quaternion.slerp(Q_spine, 0.9); //척추? 
       $chain.multiply(Q_spine);
 
-      // const Q_spine1 = computeJointParentQ(
-      //   "mixamorigSpine2",
-      //   "$spine2",
-      //   "$spine1",
-      //   $chain,
-      //   skeleton
-      // );
-      // skeleton.getBoneByName("mixamorigSpine1").quaternion.slerp(Q_spine1, 0.9);
-      // $chain.multiply(Q_spine1);
-
-      // const Q_spine2 = computeJointParentQ(
-      //   "mixamorigNeck",
-      //   "$neck1",
-      //   "$spine2",
-      //   $chain,
-      //   skeleton
-      // );
-      // skeleton.getBoneByName("mixamorigSpine2").quaternion.slerp(Q_spine2, 0.9);
       $chain_spines = $chain.multiply(Q_spine);
     }
 
@@ -862,7 +812,7 @@ function onResults2(results) {
     {
       let $chain = $chain_spines.clone();
       const Q_neck = computeJointParentQ(
-        "頭", // 목
+        "頭" ,// 목 
         "$neck2",
         "$neck1",
         $chain,
@@ -876,48 +826,42 @@ function onResults2(results) {
     {
       let $chain = $chain_spines.clone();
       const Q_shoulder_left = computeJointParentQ(
-        "左腕", // 왼위쪽팔
+        "左腕" ,// 왼위쪽팔
         "left_shoulder",
         "$left_inner_shoulder",
         $chain,
         skeleton
       );
-      skeleton.getBoneByName("左肩").quaternion.slerp(Q_shoulder_left, 0.9); // 왼어깨
+      skeleton
+        .getBoneByName("左肩")
+        .quaternion.slerp(Q_shoulder_left, 0.9); // 왼어깨 
       $chain.multiply(Q_shoulder_left);
 
       const Q_arm = computeJointParentQ(
-        "左ひじ", // 왼앞팔
+        "左ひじ" , // 왼앞팔 
         "left_elbow",
         "left_shoulder",
         $chain,
         skeleton
       );
-      skeleton.getBoneByName("左腕").quaternion.slerp(Q_arm, 0.9); // 왼위쪽팔
+      skeleton
+        .getBoneByName("左腕")
+        .quaternion.slerp(Q_arm, 0.9); // 왼위쪽팔
       $chain.multiply(Q_arm);
 
       const Q_forearm = computeJointParentQ(
-        "左手首", // 왼손목
+        "左手首" , // 왼손목
         "left_wrist",
         "left_elbow",
         $chain,
         skeleton
       );
-      skeleton.getBoneByName("左ひじ").quaternion.slerp(Q_forearm, 0.9); // 왼앞팔
+      skeleton
+        .getBoneByName("左ひじ")
+        .quaternion.slerp(Q_forearm, 0.9); // 왼앞팔
       $chain.multiply(Q_forearm);
 
-      if (results.leftHandLandmarks) {
-        // lefthand rigging
-
-        // const R_hand = computeJointParentR(
-        //   "mixamorigLeftHandIndex1",
-        //   "LEFT_INDEX_FINGER_MCP",
-        //   "left_wrist",
-        //   $chain,
-        //   skeleton
-        // );
-        // skeleton
-        //   .getBoneByName("mixamorigLeftHand")
-        //   .quaternion.slerp(new Quaternion().setFromRotationMatrix(R_hand), 0.9);
+      if (results.leftHandLandmarks) { // 왼손의 rotation
 
         let jointLeftWrist = total_pos_3d_landmarks["LEFT_WRIST"];
         let jointLeftThumb1 = total_pos_3d_landmarks["LEFT_THUMB_CMC"];
@@ -929,76 +873,200 @@ function onResults2(results) {
         let v_wrist_to_thumb1 = new THREE.Vector3()
           .subVectors(jointLeftThumb1, jointLeftWrist)
           .normalize();
-        let v_writst_to_pinky1 = new THREE.Vector3()
-          .subVectors(jointLeftPinky1, jointLeftWrist)
-          .normalize();
+
         let wrist_to_middle1 = new THREE.Vector3()
-          .subVectors(jointLeftMiddle1, jointLeftWrist)
+        .subVectors(jointLeftMiddle1, jointLeftWrist)
+        .normalize();
+
+        let MP_u = new THREE.Vector3().copy(v_wrist_to_thumb1);
+        let MP_v = new THREE.Vector3().copy(wrist_to_middle1);
+        let MP_w = new THREE.Vector3().crossVectors(MP_u,MP_v).normalize();
+        let MP_new_u = new THREE.Vector3().crossVectors(MP_v,MP_w).normalize();
+
+        const MP_R = new THREE.Matrix4().makeBasis(MP_new_u, MP_v, MP_w);
+        let R_chain = new THREE.Matrix4().makeRotationFromQuaternion($chain);
+
+        const SK_u = new THREE.Vector3()
+          .subVectors(skeleton.getBoneByName('左小指先').position, skeleton.getBoneByName('左親指先').position) // 엄지->검지 벡터
           .normalize();
-
-        let u = new THREE.Vector3().copy(v_wrist_to_thumb1);
-        let v = new THREE.Vector3().copy(wrist_to_middle1);
-        let w = new THREE.Vector3().crossVectors(u, v).normalize();
-        let new_u = new THREE.Vector3().crossVectors(v, w).normalize();
-
-        const R = new THREE.Matrix4().makeBasis(v, w, new_u);
-        let temp_chain = new THREE.Matrix4().makeRotationFromQuaternion($chain);
-        const new_R = R.clone().premultiply(temp_chain.transpose());
-        skeleton.getBoneByName("左手首").rotation.setFromRotationMatrix(R);
-        //let $quaternion = new THREE.Quaternion().setFromRotationMatrix($chain.clone());
-
-        // let boneLeftThumb1 = skeleton.getBoneByName("mixamorigLeftHandThumb1");
-        //let Rv_wrist2thumb1 = v_wrist_to_thumb1.applyQuaternion($quaternion.clone().transpose());
-        // let j_thumb1 = boneLeftThumb1.position.clone().normalize();
-        // let R_hand1 = computeR(j_thumb1,Rv_wrist2thumb1);
-
-        //skeleton.getBoneByName("mixamorigLeftHand").setRotationFromMatrix(R_hand1);
-        //console.log(R_hand1);
-        //console.log(skeleton.getBoneByName("mixamorigLeftHand"));
-
-        const Q_hand_thumb = computeJointParentQ(
-          "左親指１", // 엄지
-          "LEFT_THUMB_CMC",
-          "left_wrist",
-          $chain,
-          skeleton
+        const SK_v = skeleton.getBoneByName('左中指先').clone().position.normalize(); // 손목->중지 벡터
+        const SK_w = new THREE.Vector3().crossVectors( // 손바닥의 법선 벡터
+          SK_u,
+          SK_v
+        ).multiplyScalar(-1);
+        const SK_new_u = new THREE.Vector3().crossVectors(
+          SK_v,
+          SK_w
         );
-        const Q_hand_index = computeJointParentQ(
-          "左人指１", //검지
-          "LEFT_INDEX_FINGER_MCP",
-          "left_wrist",
-          $chain,
-          skeleton
-        );
-        const Q_hand_middle = computeJointParentQ(
-          "左中指１", // 중지
-          "LEFT_MIDDLE_FINGER_MCP",
-          "left_wrist",
-          $chain,
-          skeleton
-        );
-        const Q_hand_ring = computeJointParentQ(
-          "左薬指１", //약지
-          "LEFT_RING_FINGER_MCP",
-          "left_wrist",
-          $chain,
-          skeleton
-        );
-        const Q_hand_pinky = computeJointParentQ(
-          "左小指１", //소지
-          "LEFT_PINKY_MCP",
-          "left_wrist",
-          $chain,
-          skeleton
+        const SK_R = new THREE.Matrix4().makeBasis(
+          SK_new_u,
+          SK_v,
+          SK_w
         );
 
-        let Q_hand = new THREE.Quaternion().slerpQuaternions(
-          Q_hand_thumb.clone(),
-          Q_hand_pinky.clone(),
-          0.5
+        const R_BonetoMP = MP_R.clone().multiply( // Detection상 손의 rotation을 LeftHandBone의 rotation으로 변환하는 행렬
+          SK_R.clone().transpose()
         );
+        const R_Tpose = R_chain.clone().transpose();
+        const R_wrist = R_BonetoMP.clone().premultiply(R_Tpose); // LeftHandBone의 Local rotation 계산
+        const Q_wrist = new THREE.Quaternion().setFromRotationMatrix(R_wrist);
+        skeleton.getBoneByName("左手首").quaternion.slerp(Q_wrist,0.9); // LeftHandBone 의 Local한 quaternion 곱해줌.
+        $chain.multiply(Q_wrist);
+        const $chain_hand = $chain.clone();
+        { // 왼손 엄지
+          let $chain = $chain_hand.clone();
 
-        //skeleton.getBoneByName("左手首").quaternion.slerp(Q_hand, 0.9);
+          const Q_thumb1 = computeJointParentQ(
+            '左親指１' , // 엄지
+            "LEFT_THUMB_MCP",
+            "LEFT_THUMB_CMC",
+            $chain,
+            skeleton
+           );
+           skeleton.getBoneByName("左親指先").quaternion.slerp(Q_thumb1,0.9);
+           $chain.multiply(Q_thumb1);
+
+           const Q_thumb2 = computeJointParentQ(
+            '左親指２' , // 엄지
+            "LEFT_THUMB_IP",
+            "LEFT_THUMB_MCP",
+            $chain,
+            skeleton
+           );
+           skeleton.getBoneByName("左親指１").quaternion.slerp(Q_thumb2,0.9);
+
+        }
+        { // 왼손 검지
+          let $chain = $chain_hand.clone();
+
+          const Q_index1 = computeJointParentQ(
+            '左人指１' , // 검지
+            "LEFT_INDEX_FINGER_PIP",
+            "LEFT_INDEX_FINGER_MCP",
+            $chain,
+            skeleton
+           );
+           skeleton.getBoneByName("左人差指先").quaternion.slerp(Q_index1,0.9);
+           $chain.multiply(Q_index1);
+
+           const Q_index2 = computeJointParentQ(
+            '左人指２' , // 검지
+            "LEFT_INDEX_FINGER_DIP",
+            "LEFT_INDEX_FINGER_PIP",
+            $chain,
+            skeleton
+           );
+           skeleton.getBoneByName("左人指１").quaternion.slerp(Q_index2,0.9);
+           $chain.multiply(Q_index2);
+
+           const Q_index3 = computeJointParentQ(
+            '左人指３' , // 검지
+            "LEFT_INDEX_FINGER_TIP",
+            "LEFT_INDEX_FINGER_DIP",
+            $chain,
+            skeleton
+           );
+           skeleton.getBoneByName("左人指２").quaternion.slerp(Q_index3,0.9);
+
+        }
+        { // 왼손 중지
+          let $chain = $chain_hand.clone();
+
+          const Q_MIDDLE1 = computeJointParentQ(
+            '左中指１' , // 중지
+            "LEFT_MIDDLE_FINGER_PIP",
+            "LEFT_MIDDLE_FINGER_MCP",
+            $chain,
+            skeleton
+           );
+           skeleton.getBoneByName("左中指先").quaternion.slerp(Q_MIDDLE1,0.9);
+           $chain.multiply(Q_MIDDLE1);
+
+           const Q_MIDDLE2 = computeJointParentQ(
+            '左中指２' , // 중지
+            "LEFT_MIDDLE_FINGER_DIP",
+            "LEFT_MIDDLE_FINGER_PIP",
+            $chain,
+            skeleton
+           );
+           skeleton.getBoneByName("左中指１").quaternion.slerp(Q_MIDDLE2,0.9);
+           $chain.multiply(Q_MIDDLE2);
+
+           const Q_MIDDLE3 = computeJointParentQ(
+            '左中指３' , // 중지
+            "LEFT_MIDDLE_FINGER_TIP",
+            "LEFT_MIDDLE_FINGER_DIP",
+            $chain,
+            skeleton
+           );
+           skeleton.getBoneByName("左中指２").quaternion.slerp(Q_MIDDLE3,0.9);
+           $chain.multiply(Q_MIDDLE3);
+        }
+
+        { // 왼손 약지
+          let $chain = $chain_hand.clone();
+
+          const Q_RING1 = computeJointParentQ(
+            '左薬指１' , // 약지
+            "LEFT_RING_FINGER_PIP",
+            "LEFT_RING_FINGER_MCP",
+            $chain,
+            skeleton
+           );
+           skeleton.getBoneByName("左薬指先").quaternion.slerp(Q_RING1,0.9);
+           $chain.multiply(Q_RING1);
+
+           const Q_RING2 = computeJointParentQ(
+            '左薬指２' , // 약지
+            "LEFT_RING_FINGER_DIP",
+            "LEFT_RING_FINGER_PIP",
+            $chain,
+            skeleton
+           );
+           skeleton.getBoneByName("左薬指１").quaternion.slerp(Q_RING2,0.9);
+           $chain.multiply(Q_RING2);
+
+           const Q_RING3 = computeJointParentQ(
+            '左薬指３' , // 약지
+            "LEFT_RING_FINGER_TIP",
+            "LEFT_RING_FINGER_DIP",
+            $chain,
+            skeleton
+           );
+           skeleton.getBoneByName("左薬指２").quaternion.slerp(Q_RING3,0.9);
+        }
+        { // 왼손 소지
+          let $chain = $chain_hand.clone();
+
+          const Q_PINKY1 = computeJointParentQ(
+            '左小指１' , // 소지
+            "LEFT_PINKY_PIP",
+            "LEFT_PINKY_MCP",
+            $chain,
+            skeleton
+           );
+           skeleton.getBoneByName("左小指先").quaternion.slerp(Q_PINKY1,0.9);
+           $chain.multiply(Q_PINKY1);
+
+           const Q_PINKY2 = computeJointParentQ(
+            '左小指２' , // 소지
+            "LEFT_PINKY_DIP",
+            "LEFT_PINKY_PIP",
+            $chain,
+            skeleton
+           );
+           skeleton.getBoneByName("左小指１").quaternion.slerp(Q_PINKY2,0.9);
+           $chain.multiply(Q_PINKY2);
+
+           const Q_PINKY3 = computeJointParentQ(
+            '左小指３' , // 소지
+            "LEFT_PINKY_TIP",
+            "LEFT_PINKY_DIP",
+            $chain,
+            skeleton
+           );
+           skeleton.getBoneByName("左小指２").quaternion.slerp(Q_PINKY3,0.9);
+        }
       }
     }
 
@@ -1006,43 +1074,245 @@ function onResults2(results) {
     {
       let $chain = $chain_spines.clone();
       const Q_shoulder_right = computeJointParentQ(
-        "右腕", // 오른쪽위팔
+        "右腕" , // 오른쪽위팔
         "right_shoulder",
         "$right_inner_shoulder",
         $chain,
         skeleton
       );
-      skeleton.getBoneByName("右肩").quaternion.slerp(Q_shoulder_right, 0.9); // 오른어깨
+      skeleton
+        .getBoneByName("右肩")
+        .quaternion.slerp(Q_shoulder_right, 0.9); // 오른어깨
       $chain.multiply(Q_shoulder_right);
 
       const Q_arm = computeJointParentQ(
-        "右ひじ", //오른앞팔
+        "右ひじ" , //오른앞팔
         "right_elbow",
         "right_shoulder",
         $chain,
         skeleton
       );
-      skeleton.getBoneByName("右腕").quaternion.slerp(Q_arm, 0.9); // 오른위쪽팔
+      skeleton
+        .getBoneByName("右腕")
+        .quaternion.slerp(Q_arm, 0.9); // 오른위쪽팔
       $chain.multiply(Q_arm);
 
       const Q_forearm = computeJointParentQ(
-        "右手首", // 오른손목
+        "右手首" , // 오른손목
         "right_wrist",
         "right_elbow",
         $chain,
         skeleton
       );
-      skeleton.getBoneByName("右ひじ").quaternion.slerp(Q_forearm, 0.9); // 오른앞팔
+      skeleton
+        .getBoneByName("右ひじ")
+        .quaternion.slerp(Q_forearm, 0.9); // 오른앞팔
       $chain.multiply(Q_forearm);
 
-      const Q_hand = computeJointParentQ(
-        "右人指１", // 오른검지
-        "right_index",
-        "right_wrist",
-        $chain,
-        skeleton
-      );
-      skeleton.getBoneByName("右手首").quaternion.slerp(Q_hand, 0.9); // 오른손목
+      if (results.rightHandLandmarks) { // 오른손의 rotation
+
+        let jointRightWrist = total_pos_3d_landmarks["RIGHT_WRIST"];
+        let jointRightThumb1 = total_pos_3d_landmarks["RIGHT_THUMB_CMC"];
+        let jointRightMiddle1 = total_pos_3d_landmarks["RIGHT_MIDDLE_FINGER_MCP"];
+
+        let v_wrist_to_thumb1 = new THREE.Vector3()
+          .subVectors(jointRightThumb1, jointRightWrist)
+          .normalize();
+
+        let wrist_to_middle1 = new THREE.Vector3()
+        .subVectors(jointRightMiddle1, jointRightWrist)
+        .normalize();
+
+        let MP_u = new THREE.Vector3().copy(v_wrist_to_thumb1);
+        let MP_v = new THREE.Vector3().copy(wrist_to_middle1);
+        let MP_w = new THREE.Vector3().crossVectors(MP_u,MP_v).normalize();
+        let MP_new_u = new THREE.Vector3().crossVectors(MP_v,MP_w).normalize();
+
+        const MP_R = new THREE.Matrix4().makeBasis(MP_new_u, MP_v, MP_w);
+        let R_chain = new THREE.Matrix4().makeRotationFromQuaternion($chain);
+
+        const SK_u = new THREE.Vector3()
+          .subVectors(skeleton.getBoneByName('右小指先').position, skeleton.getBoneByName('右親指先').position) // 엄지->검지 벡터
+          .normalize();
+        const SK_v = skeleton.getBoneByName('右中指先').clone().position.normalize(); // 손목->중지 벡터
+        const SK_w = new THREE.Vector3().crossVectors( // 손바닥의 법선 벡터
+          SK_u,
+          SK_v
+        ).multiplyScalar(-1);
+        const SK_new_u = new THREE.Vector3().crossVectors(
+          SK_v,
+          SK_w
+        );
+        const SK_R = new THREE.Matrix4().makeBasis(
+          SK_new_u,
+          SK_v,
+          SK_w
+        );
+
+        const R_BonetoMP = MP_R.clone().multiply( // Detection상 손의 rotation을 RightHandBone의 rotation으로 변환하는 행렬
+          SK_R.clone().transpose()
+        );
+        const R_Tpose = R_chain.clone().transpose();
+        const R_wrist = R_BonetoMP.clone().premultiply(R_Tpose); // RightHandBone의 Local rotation 계산
+        const Q_wrist = new THREE.Quaternion().setFromRotationMatrix(R_wrist);
+        skeleton.getBoneByName("右手首").quaternion.slerp(Q_wrist,0.9); // RightHandBone 의 Local한 quaternion 곱해줌.
+        $chain.multiply(Q_wrist);
+        const $chain_hand = $chain.clone();
+        { // 오른손 엄지
+          let $chain = $chain_hand.clone();
+
+          const Q_thumb1 = computeJointParentQ(
+            '右親指１' , // 엄지
+            "RIGHT_THUMB_MCP",
+            "RIGHT_THUMB_CMC",
+            $chain,
+            skeleton
+           );
+           skeleton.getBoneByName("右親指先").quaternion.slerp(Q_thumb1,0.9);
+           $chain.multiply(Q_thumb1);
+
+           const Q_thumb2 = computeJointParentQ(
+            '右親指２' , // 엄지
+            "RIGHT_THUMB_IP",
+            "RIGHT_THUMB_MCP",
+            $chain,
+            skeleton
+           );
+           skeleton.getBoneByName("右親指１").quaternion.slerp(Q_thumb2,0.9);
+
+        }
+        { // 오른손 검지
+          let $chain = $chain_hand.clone();
+
+          const Q_index1 = computeJointParentQ(
+            '右人指１' , // 검지
+            "RIGHT_INDEX_FINGER_PIP",
+            "RIGHT_INDEX_FINGER_MCP",
+            $chain,
+            skeleton
+           );
+           skeleton.getBoneByName("右人差指先").quaternion.slerp(Q_index1,0.9);
+           $chain.multiply(Q_index1);
+
+           const Q_index2 = computeJointParentQ(
+            '右人指２' , // 검지
+            "RIGHT_INDEX_FINGER_DIP",
+            "RIGHT_INDEX_FINGER_PIP",
+            $chain,
+            skeleton
+           );
+           skeleton.getBoneByName("右人指１").quaternion.slerp(Q_index2,0.9);
+           $chain.multiply(Q_index2);
+
+           const Q_index3 = computeJointParentQ(
+            '右人指３' , // 검지
+            "RIGHT_INDEX_FINGER_TIP",
+            "RIGHT_INDEX_FINGER_DIP",
+            $chain,
+            skeleton
+           );
+           skeleton.getBoneByName("右人指２").quaternion.slerp(Q_index3,0.9);
+
+        }
+        { // 오른손 중지
+          let $chain = $chain_hand.clone();
+
+          const Q_MIDDLE1 = computeJointParentQ(
+            '右中指１' , // 중지
+            "RIGHT_MIDDLE_FINGER_PIP",
+            "RIGHT_MIDDLE_FINGER_MCP",
+            $chain,
+            skeleton
+           );
+           skeleton.getBoneByName("右中指先").quaternion.slerp(Q_MIDDLE1,0.9);
+           $chain.multiply(Q_MIDDLE1);
+
+           const Q_MIDDLE2 = computeJointParentQ(
+            '右中指２' , // 중지
+            "RIGHT_MIDDLE_FINGER_DIP",
+            "RIGHT_MIDDLE_FINGER_PIP",
+            $chain,
+            skeleton
+           );
+           skeleton.getBoneByName("右中指１").quaternion.slerp(Q_MIDDLE2,0.9);
+           $chain.multiply(Q_MIDDLE2);
+
+           const Q_MIDDLE3 = computeJointParentQ(
+            '右中指３' , // 중지
+            "RIGHT_MIDDLE_FINGER_TIP",
+            "RIGHT_MIDDLE_FINGER_DIP",
+            $chain,
+            skeleton
+           );
+           skeleton.getBoneByName("右中指２").quaternion.slerp(Q_MIDDLE3,0.9);
+           $chain.multiply(Q_MIDDLE3);
+        }
+
+        { // 오른손 약지
+          let $chain = $chain_hand.clone();
+
+          const Q_RING1 = computeJointParentQ(
+            '右薬指１' , // 약지
+            "RIGHT_RING_FINGER_PIP",
+            "RIGHT_RING_FINGER_MCP",
+            $chain,
+            skeleton
+           );
+           skeleton.getBoneByName("右薬指先").quaternion.slerp(Q_RING1,0.9);
+           $chain.multiply(Q_RING1);
+
+           const Q_RING2 = computeJointParentQ(
+            '右薬指２' , // 약지
+            "RIGHT_RING_FINGER_DIP",
+            "RIGHT_RING_FINGER_PIP",
+            $chain,
+            skeleton
+           );
+           skeleton.getBoneByName("右薬指１").quaternion.slerp(Q_RING2,0.9);
+           $chain.multiply(Q_RING2);
+
+           const Q_RING3 = computeJointParentQ(
+            '右薬指３' , // 약지
+            "RIGHT_RING_FINGER_TIP",
+            "RIGHT_RING_FINGER_DIP",
+            $chain,
+            skeleton
+           );
+           skeleton.getBoneByName("右薬指２").quaternion.slerp(Q_RING3,0.9);
+        }
+        { // 오른손 소지
+          let $chain = $chain_hand.clone();
+
+          const Q_PINKY1 = computeJointParentQ(
+            '右小指１' , // 소지
+            "RIGHT_PINKY_PIP",
+            "RIGHT_PINKY_MCP",
+            $chain,
+            skeleton
+           );
+           skeleton.getBoneByName("右小指先").quaternion.slerp(Q_PINKY1,0.9);
+           $chain.multiply(Q_PINKY1);
+
+           const Q_PINKY2 = computeJointParentQ(
+            '右小指２' , // 소지
+            "RIGHT_PINKY_DIP",
+            "RIGHT_PINKY_PIP",
+            $chain,
+            skeleton
+           );
+           skeleton.getBoneByName("右小指１").quaternion.slerp(Q_PINKY2,0.9);
+           $chain.multiply(Q_PINKY2);
+
+           const Q_PINKY3 = computeJointParentQ(
+            '右小指３' , // 소지
+            "RIGHT_PINKY_TIP",
+            "RIGHT_PINKY_DIP",
+            $chain,
+            skeleton
+           );
+           skeleton.getBoneByName("右小指２").quaternion.slerp(Q_PINKY3,0.9);
+        }
+      }
     }
 
     // left legs
@@ -1055,7 +1325,9 @@ function onResults2(results) {
         $chain,
         skeleton
       );
-      skeleton.getBoneByName("左足").quaternion.slerp(Q_upLeg, 0.9); // 왼허벅지
+      skeleton
+        .getBoneByName("左足")
+        .quaternion.slerp(Q_upLeg, 0.9); // 왼허벅지
       $chain = $chain.multiply(Q_upLeg);
 
       const Q_leg = computeJointParentQ(
@@ -1065,82 +1337,75 @@ function onResults2(results) {
         $chain,
         skeleton
       );
-      skeleton.getBoneByName("左ひざ").quaternion.slerp(Q_leg, 0.9); // 왼무릎
+      skeleton
+        .getBoneByName("左ひざ")
+        .quaternion.slerp(Q_leg, 0.9); // 왼무릎
 
       $chain = $chain.multiply(Q_leg);
       const Q_foot = computeJointParentQ(
-        "左つま先", //왼발끝
+        "左つま先" , //왼발끝
         "left_foot_index",
         "left_ankle",
         $chain,
         skeleton
       );
-      skeleton.getBoneByName("左足首").quaternion.slerp(Q_foot, 0.9); // 왼발목
+      skeleton
+        .getBoneByName("左足首")
+        .quaternion.slerp(Q_foot, 0.9); // 왼발목
     }
 
     // right legs
     {
       let $chain = Q_hips.clone();
       const Q_upLeg = computeJointParentQ(
-        "右ひざ", // 오른무릎
+        "右ひざ" , // 오른무릎
         "right_knee",
         "right_hip",
         $chain,
         skeleton
       );
-      skeleton.getBoneByName("右足").quaternion.slerp(Q_upLeg, 0.9); // 오른허벅지
+      skeleton
+        .getBoneByName("右足")
+        .quaternion.slerp(Q_upLeg, 0.9); // 오른허벅지
       $chain = $chain.multiply(Q_upLeg);
 
       const Q_leg = computeJointParentQ(
-        "右足首", // 오른발목
+        "右足首" , // 오른발목
         "right_ankle",
         "right_knee",
         $chain,
         skeleton
       );
-      skeleton.getBoneByName("右ひざ").quaternion.slerp(Q_leg, 0.9); // 오른무릎
+      skeleton
+        .getBoneByName("右ひざ")
+        .quaternion.slerp(Q_leg, 0.9); // 오른무릎
 
       $chain = $chain.multiply(Q_leg);
       const Q_foot = computeJointParentQ(
-        "右つま先", //오른발끝
+        "右つま先" , //오른발끝
         "right_foot_index",
         "right_ankle",
         $chain,
         skeleton
       );
-      skeleton.getBoneByName("右足首").quaternion.slerp(Q_foot, 0.9); // 오른발목
+      skeleton
+        .getBoneByName("右足首")
+        .quaternion.slerp(Q_foot, 0.9); // 오른발목
     }
-
-    // TEST------------------------------------------------------------------------------------------------------------------------------------------------
-    // 루트부터 싹 새롭게 설정하지 않았음 : 어깨의 상대적인 위치만 설정해주겠다 ( 어깨를 임시적인 루트로 정의하고 진행 )
-    // => 실제로는 루트에서부터 차례대로 로컬 트랜스폼이 작동하도록 만들어야 함
-
-    // 하위 부분 움직이도록 만들기
-
-    // let jointLeftWrist = pos_3d_landmarks["left_wrist"]; // p2
-    // let boneLeftHand = skeleton.getBoneByName("mixamorigLeftHand"); // j2
-    // let v12 = new THREE.Vector3()
-    //   .subVectors(jointLeftWrist, jointLeftElbow) // (벡터 2, 벡터 1);
-    //   .normalize();
-    // let j2 = boneLeftHand.position.clone().normalize();
-    // let Rv12 = v12.clone().applyMatrix4(R0.clone().transpose()); // R0 의 역행렬으로부터 -> transpose()
-    // let R1 = computeR(j2, Rv12);
-    // skeleton.getBoneByName("mixamorigLeftForeArm").setRotationFromMatrix(R1); // setRotationFromQuaternion() 사용 권장
-
-    // console.log(boneLeftArm);
-
-    // console.log(skeleton);
-
-    // 갈라지는 곳에서는 두 개의 Rotation Matrix 가 나올 수 있고, Rotation 의 Interpolation 을 위해서 Quaternion 사용
-    // 랜드마크 + 홀리스틱 ( 손가락 관절 ) + IK Solver ( 바닥에 붙이기 - 타켓 포지션에 적용 ) + Physics ( Skin Mesh 에 대해서 충돌 피직스 설정 - 충돌 일어나지 않도록 )
+    
+  
   }
 
   //ikSolver_left?.update();
   //ikSolver_right?.update();
   //ikSolver_left_foot?.update();
   //ikSolver_right_foot?.update();
-  const delta = clock.getDelta();
-  physics.update(delta);
+  const hip_right_toe = skeleton.getBoneByName("右足首"); //오른발목
+  
+  cannon_tick(hip_right_toe);
+
+  //const delta = clock.getDelta();
+  //physics.update(delta);
   renderer.render(scene, camera_ar);
   canvasCtx.restore();
 }
@@ -1170,7 +1435,7 @@ async function detectionFrame() {
   videoElement.requestVideoFrameCallback(detectionFrame);
 }
 
-detectionFrame();
+//detectionFrame();
 
 const camera = new Camera(videoElement, {
   onFrame: async () => {
@@ -1180,4 +1445,4 @@ const camera = new Camera(videoElement, {
   height: 720,
 });
 
-//camera.start();
+camera.start();
