@@ -5,7 +5,7 @@ import { FBXLoader } from "./node_modules/three/examples/jsm/loaders/FBXLoader.j
 import { CCDIKSolver } from "./node_modules/three/examples/jsm/animation/CCDIKSolver.js";
 import { MMDLoader } from "./node_modules/three/examples/jsm/loaders/MMDLoader.js";
 import { MMDPhysics } from "./node_modules/three/examples/jsm/animation/MMDPhysics.js";
-//import * as CANNON from './node_modules/cannon/build/cannon.js';
+import { MMDAnimationHelper } from "./node_modules/three/examples/jsm/animation/MMDAnimationHelper.js";
 
 // DOM 요소 가져오기
 const videoElement = document.getElementsByClassName("input_video")[0];
@@ -105,6 +105,9 @@ const loader = new FBXLoader(); //fbxLoader
 const mmdloader = new MMDLoader();
 const clock = new THREE.Clock();
 let oldElapsedTime = 0;
+
+const helper = new MMDAnimationHelper();
+
 mmdloader.load("../models/lin/lin.pmd", function (mmd) {
   // 마네킹을 그리는 부분
   model = mmd; // gltf.scene -> GLTF 용
@@ -112,38 +115,29 @@ mmdloader.load("../models/lin/lin.pmd", function (mmd) {
 
   model.scale.multiplyScalar(0.1); // 모델 전체의 크기 조절
   console.log(model);
-  physics = new MMDPhysics(model,model.geometry.userData.MMD.rigidBodies,model.geometry.userData.MMD.constraints);
-  physics.setGravity(new THREE.Vector3(0,10,0));
-  //physics.update();
-  console.log(physics);
+
+  
+  
   let bones = [];
 
   let char_mesh = null;
   model.traverse(function (object) {
-    // object.scale.multiplyScalar(1);
+
     if (object.isMesh) {
       object.castShadow = true; // 스킨 메쉬
       if (!char_mesh) char_mesh = object;
     }
 
-    //console.log(object.isBone);
     if (object.isBone) {
       // 본
       // https://stackoverflow.com/questions/13309289/three-js-geometry-on-top-of-another
       bones.push(object); // -> 배열로 구성 ( 위계질서가 있음 - 조인트 )
-      //console.log(object);
-      //if(object.name == "mixamorigLeftToeBase") {
-      //let axis_helper = new THREE.AxesHelper(20);
-      //axis_helper.material.depthTest = false;
-      //object.add(new THREE.AxesHelper(20));
-      //}
-      //let axis_helper = new THREE.AxesHelper(20);
-      //axis_helper.material.depthTest = false;
-      //object.add(axis_helper);
-      //axis_helpers.push(axis_helper);
+
     }
   });
-
+  helper.add( char_mesh , {
+    physics: true
+  } );
   bones.forEach(function (bone) {
     // 조인트 이름을 콘솔에 찍어봄 : 힙 ( 루트 본 ) , 스파인, 넥, 헤드 등등
     console.log(bone.name);
@@ -155,58 +149,48 @@ mmdloader.load("../models/lin/lin.pmd", function (mmd) {
   // getBoneByName : 직접 조인트 이름으로 접근
   // 조인트 앵글을 계산 : 개별 조인트의 Rotation 을 구하는 식을 계산 & 개별 조인트의 offset 을 가지고 해당 조인트에서 로컬 트랜스폼 설정
 
+
   skeleton_helper = new THREE.SkeletonHelper(model);
   skeleton_helper.visible = true;
 
   scene.add(skeleton_helper);
 
-  const iks_left = [
+  const iks_left = [ // 왼팔용 ik 배열
     {
-      target: 44,
-      effector: 43,
-      links: [{ index: 30 }, { index: 31 }, { index: 32 }, { index: 33 }],
+      target: 78,
+      effector: 30,
+      links: [{ index: 29 }, { index: 28 }, { index: 21 }, { index: 20 }, { index : 19 }, { index : 18 }],
     },
   ];
 
-  const iks_right = [
+  const iks_right = [// 오른팔용 ik 배열
     {
-      target: 70,
-      effector: 69,
-      links: [{ index: 56 }, { index: 57 }, { index: 58 }, { index: 59 }],
+      target: 85,
+      effector: 52,
+      links: [{ index: 51 }, { index: 50 }, { index: 43 }, { index: 42 }, { index : 41 }, { index : 40 }],
     },
   ];
 
-  const iks_left_foot = [
+  const iks_left_foot = [ // 왼다리용 ik 배열
     {
-      target: 88,
-      effector: 87,
-      links: [{ index: 85 }, { index: 86 }],
+      target: 63,
+      effector: 39,
+      links: [{ index: 38 }, {index:37} ], // 63 39 38 37 10 1 0
     },
   ];
 
-  const iks_right_foot = [
+  const iks_right_foot = [// 오른 다리용 ik 배열
     {
-      target: 92,
-      effector: 91,
-      links: [{ index: 89 }, { index: 90 }],
+      target: 64,
+      effector: 61,
+      links: [{ index: 60 }, { index: 59 }],
     },
   ];
-  // console.log(model.children[0].children[0]);
-  //ikSolver_left = new CCDIKSolver(char_mesh, iks_left);
-  //ikSolver_right = new CCDIKSolver(char_mesh, iks_right);
-  //ikSolver_left_foot = new CCDIKSolver(char_mesh, iks_left_foot);
-  //ikSolver_right_foot = new CCDIKSolver(char_mesh, iks_right_foot);
-  //const ikhelper_left = ikSolver_left.createHelper();
-  //scene.add(ikhelper_left);
-  // console.log(bones.map((el) => el.name).join("\n"));
-
-  //const animations = gltf.animations;
-  //mixer = new THREE.AnimationMixer( model );
-
-  //numAnimations = animations.length;
-
-  //console.log(model.position);
-  //console.log(model.scale);
+  
+  ikSolver_left = new CCDIKSolver(model, iks_left); // 왼팔 IK
+  ikSolver_right = new CCDIKSolver(model, iks_right);// 오른팔 IK
+  ikSolver_left_foot = new CCDIKSolver(model, iks_left_foot);// 왼다리 IK
+  ikSolver_right_foot = new CCDIKSolver(model, iks_right_foot);// 오른다리 IK
 });
 
 let pose_name_to_index = {
@@ -292,37 +276,37 @@ let axis_helper_root = new THREE.AxesHelper(1);
 axis_helper_root.position.set(0, 0.001, 0);
 scene.add(axis_helper_root);
 
-const pose_points = new THREE.Points(
+const pose_points = new THREE.Points( // Pose Landmark 표시할 Points Object
   new THREE.BufferGeometry(),
   new THREE.PointsMaterial({
-    color: 0xff0000,
+    color: 0xff0000, // 붉은색
     size: 0.1,
     sizeAttenuation: true,
   })
 );
 
-const custom_points = new THREE.Points(
+const custom_points = new THREE.Points( // 기존 Landmark 들로 구한 Custom Landmark 를 표시할 Points Object
   new THREE.BufferGeometry(),
   new THREE.PointsMaterial({
-    color: 0x0000ff,
+    color: 0x0000ff, // 파란색
     size: 0.1,
     sizeAttenuation: true,
   })
 );
 
-pose_points.geometry.setAttribute(
+pose_points.geometry.setAttribute( // Pose point의 BufferGeometry정보. 
   "position",
   new THREE.BufferAttribute(new Float32Array(33 * 3), 3)
 );
 scene.add(pose_points);
 
-custom_points.geometry.setAttribute(
+custom_points.geometry.setAttribute( // Custom point의 BufferGeometry정보. 
   "position",
   new THREE.BufferAttribute(new Float32Array(10 * 3), 3)
 );
 scene.add(custom_points);
 
-const hand_points = new THREE.Points(
+const hand_points = new THREE.Points( // Hand Landmark 를 표시할 Points Object
   new THREE.BufferGeometry(),
   new THREE.PointsMaterial({
     color: 0xff0000,
@@ -331,64 +315,46 @@ const hand_points = new THREE.Points(
   })
 );
 
-hand_points.geometry.setAttribute(
+hand_points.geometry.setAttribute( // Hand point의 BufferGeometry정보. 
   "position",
   new THREE.BufferAttribute(new Float32Array(42 * 3), 3)
 );
 scene.add(hand_points);
 
-const world = new CANNON.World(); //  Physics               !!!!!!!!
-world.gravity.set(0, -9.82*10, 0);
+const world = new CANNON.World(); //    Physics   !!!!!!!!   // CANNON.js 의 Physcis 이용. 피직스가 존재하는 world의 움직임을 우리의 world가 따라가는 형식.
+world.gravity.set(0, -9.82*10, 0); // 중력 임의로 set
 
-const floorShape = new CANNON.Plane();
+const floorShape = new CANNON.Plane(); // cannon physics 상에서의 땅으로 쓸 plane
 const floorBody = new CANNON.Body();
 floorBody.mass = 0;
 floorBody.addShape(floorShape);
 world.addBody(floorBody);
-floorBody.quaternion.setFromAxisAngle(new CANNON.Vec3(- 1, 0, 0), Math.PI * 0.5) 
-
-const sphereShape = new CANNON.Sphere(0.5); // BONE Physics
+floorBody.quaternion.setFromAxisAngle(new CANNON.Vec3(- 1, 0, 0), Math.PI * 0.5)  // 기존 plane을 회전시켜 y=0인 xz평면으로 만들기
+ 
+const sphereShape = new CANNON.Sphere(5); // BONE Physics로 쓰일 형태.
 const sphereBody = new CANNON.Body({
-  mass: 1,
-  position: new CANNON.Vec3(0, 3, 0),
+  mass: 1, // 질량은 임의로 1로 둠
+  position: new CANNON.Vec3(0, 20, 0), // 초기 위치를 20으로 설정해 캐릭터가 하늘에서 떨어지며 시작하는 것처럼 효과를 줌
   shape: sphereShape,
 });
-world.addBody(sphereBody);
+world.addBody(sphereBody); // cannon world 상에 physics가 있는 sphere를 넣음.
 
-const cannon_tick = (bone) => // Apply physics
+const cannon_tick = (bone) => // Apply physics // 함수가 호출되면 중력에 의해 sphereBody가 떨어짐
 {
-    const elapsedTime = clock.getElapsedTime()
-    const deltaTime = elapsedTime - oldElapsedTime
-    oldElapsedTime = elapsedTime
+
+    const elapsedTime = clock.getElapsedTime();
+    const deltaTime = elapsedTime - oldElapsedTime;
+    oldElapsedTime = elapsedTime;
 
     // Update physics
-    world.step(1 / 60, deltaTime, 3)
+    world.step(1 / 60, deltaTime, 3);
     // step은 업데이트 해주는 메소드
-    //console.log(sphereBody.position.y)
   
-    // cannon.js world에 있는 값으로 Three.js의 sphere 값을 업데이트
-    // sphere.position.x = sphereBody.position.x
-    // sphere.position.y = sphereBody.position.y
-    // sphere.position.z = sphereBody.position.z
-  
-    bone.position.copy(sphereBody.position)
+    bone.position.copy(sphereBody.position); // sphereBody가 떨어짐에 따라 전달인자로 받을 뼈 역시 떨어지게 만들었음.
 }
-// const righthand_points = new THREE.Points(
-//   new THREE.BufferGeometry(),
-//   new THREE.PointsMaterial({
-//     color: 0xff0000,
-//     size: 0.1,
-//     sizeAttenuation: true,
-//   })
-// );
-//
-// righthand_points.geometry.setAttribute(
-//   "position",
-//   new THREE.BufferAttribute(new Float32Array(33 * 3), 3)
-// );
-// scene.add(righthand_points);
 
-function computeR(A, B) {
+
+function computeR(A, B) { // 회전 행렬 계산해주는 함수. 우리는 짐볼락 현상 방지를 위해 회전 쿼터니언 계산하는 함수를 따로 만들었음.
   // get unit vectors
   const uA = A.clone().normalize();
   const uB = B.clone().normalize();
@@ -435,29 +401,20 @@ function computeR(A, B) {
   return R;
 }
 
-function computeQuaternion(A, B) {
+function computeQuaternion(A, B) { // 짐볼락 현상 방지를 위해 두 벡터 간의 쿼터니언을 계산하는 함수를 만들었음.
   const uA = A.clone().normalize();
   const uB = B.clone().normalize();
 
-  // get products
   const idot = uA.dot(uB);
   const cross_AB = new THREE.Vector3().crossVectors(uA, uB);
-  const cdot = cross_AB.length();
 
-  // get new unit vectors
-  const u = uA.clone();
-  const v = new THREE.Vector3()
-    .subVectors(uB, uA.clone().multiplyScalar(idot))
-    .normalize();
   const w = cross_AB.clone().normalize();
 
-  const angle = Math.acos(Math.abs(idot));
-  // const Q = new THREE.Quaternion().setFromAxisAngle(w, angle);
-  // return Q;
+  const angle = Math.acos(Math.abs(idot));  // 코사인 함수로 사이각을 구하고 다시 arccos함수에 넣어서 angle 계산. 두 벡터의 사이각을 90도 이하로 하기 위해 코사인에 절대값을 취함
   const half_angle = angle / 2;
   const half_sin = Math.sin(half_angle);
   const half_cos = Math.cos(half_angle);
-  return new THREE.Quaternion(
+  return new THREE.Quaternion( // 최종 쿼터니언 계산식
     half_sin * w.x,
     half_sin * w.y,
     half_sin * w.z,
@@ -465,7 +422,7 @@ function computeQuaternion(A, B) {
   );
 }
 
-function computeR_hips() {
+function computeR_hips() { //기준이 되는 Hip의 로테이션 계산.
   const hip_joint = custom_pos_3d_landmarks["$hips"];
   let u = new THREE.Vector3()
     .subVectors(pos_3d_landmarks["left_hip"], pos_3d_landmarks["right_hip"])
@@ -479,7 +436,7 @@ function computeR_hips() {
   return R;
 }
 
-function computeJointParentR(
+function computeJointParentR( // 이 함수 역시 쿼터니언 기반의 함수로 대체했음.
   nameSkeletonJoint,
   nameMpJoint,
   nameMpJointParent,
@@ -498,7 +455,7 @@ function computeJointParentR(
   return R;
 }
 
-function computeJointParentQ(
+function computeJointParentQ( // 기존 함수를 쿼터니언 방식으로 변경한 함수. 기존 함수와 작동 원리는 동일하다.
   nameSkeletonJoint,
   nameMpJoint,
   nameMpJointParent,
@@ -518,11 +475,6 @@ function computeJointParentQ(
 }
 
 function onResults2(results) {
-  // if (
-  //   !results.poseLandmarks
-  // ) {
-  //   return;
-  // }
 
   canvasCtx.save();
   canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
@@ -535,12 +487,6 @@ function onResults2(results) {
   );
 
   {
-    // Only overwrite existing pixels.
-    // canvasCtx.globalCompositeOperation = 'source-in';
-    // canvasCtx.fillStyle = '#00FF00';
-    // canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
-
-    // Only overwrite missing pixels.
     canvasCtx.globalCompositeOperation = "destination-atop";
     canvasCtx.drawImage(
       results.image,
@@ -549,8 +495,6 @@ function onResults2(results) {
       canvasElement.width,
       canvasElement.height
     );
-
-    //console.log(results.poseLandmarks);
 
     canvasCtx.globalCompositeOperation = "source-over";
     drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {
@@ -599,8 +543,6 @@ function onResults2(results) {
   if (results.poseLandmarks) {
     let pose_landmarks_dict = {};
     results.poseLandmarks.forEach((landmark, i) => {
-      //console.log(i, landmark);
-      //console.log(index_to_name[i]);
       pose_landmarks_dict[pose_index_to_name[i]] = landmark;
     });
 
@@ -621,8 +563,9 @@ function onResults2(results) {
     }
     pose_points.geometry.attributes.position.needsUpdate = true;
 
-    // Custom Pos 3d Landmarks
-
+    // Custom Pos 3d Landmarks  // 1. left hip과 right hip의 중심점
+                                // 2. left sholuder와 right shoulder의 중심점
+                                // 위의 두가지 점을 비율에 따라 내분하는 점을 구해 custom landmark를 계산했음.
     custom_pos_3d_landmarks["$center_hip"] = new THREE.Vector3()
       .addVectors(
         pos_3d_landmarks["left_hip"].clone(),
@@ -717,8 +660,6 @@ function onResults2(results) {
 
       let lefthand_landmarks_dict = {};
       results.leftHandLandmarks.forEach((landmark, i) => {
-        //console.log(i, landmark);
-        //console.log(index_to_name[i]);
         lefthand_landmarks_dict[`LEFT_${hand_index_to_name[i]}`] = landmark;
       });
 
@@ -741,14 +682,11 @@ function onResults2(results) {
         hand_points.geometry.attributes.position.array[3 * i + 2] = value.z;
         i++;
       }
-      //lefthand_points.geometry.attributes.position.needsUpdate = true;
     }
 
     if (results.rightHandLandmarks) {
       let righthand_landmarks_dict = {};
       results.rightHandLandmarks.forEach((landmark, i) => {
-        //console.log(i, landmark);
-        //console.log(index_to_name[i]);
         righthand_landmarks_dict[`RIGHT_${hand_index_to_name[i]}`] = landmark;
       });
 
@@ -792,9 +730,9 @@ function onResults2(results) {
 
     // spine
     {
-      let $chain = Q_hips.clone();
+      let $chain = Q_hips.clone(); // 모델의 spine이 한개밖에 없는 관계로 바로 머리와 이어줬음
       const Q_spine = computeJointParentQ(
-        "首", // 머리 
+        "首", // 목
         "$neck1",
         "$spine",
         $chain,
@@ -812,13 +750,13 @@ function onResults2(results) {
     {
       let $chain = $chain_spines.clone();
       const Q_neck = computeJointParentQ(
-        "頭" ,// 목 
+        "頭" ,// 머리
         "$neck2",
         "$neck1",
         $chain,
         skeleton
       );
-      skeleton.getBoneByName("首").quaternion.slerp(Q_neck, 0.9); //머리
+      skeleton.getBoneByName("首").quaternion.slerp(Q_neck, 0.9); //목
       $chain.multiply(Q_neck);
     }
 
@@ -865,10 +803,7 @@ function onResults2(results) {
 
         let jointLeftWrist = total_pos_3d_landmarks["LEFT_WRIST"];
         let jointLeftThumb1 = total_pos_3d_landmarks["LEFT_THUMB_CMC"];
-        let jointLeftIndex1 = total_pos_3d_landmarks["LEFT_INDEX_FINGER_MCP"];
         let jointLeftMiddle1 = total_pos_3d_landmarks["LEFT_MIDDLE_FINGER_MCP"];
-        let jointLeftRing1 = total_pos_3d_landmarks["LEFT_RING_FINGER_MCP"];
-        let jointLeftPinky1 = total_pos_3d_landmarks["LEFT_PINKY_MCP"];
 
         let v_wrist_to_thumb1 = new THREE.Vector3()
           .subVectors(jointLeftThumb1, jointLeftWrist)
@@ -887,9 +822,9 @@ function onResults2(results) {
         let R_chain = new THREE.Matrix4().makeRotationFromQuaternion($chain);
 
         const SK_u = new THREE.Vector3()
-          .subVectors(skeleton.getBoneByName('左小指先').position, skeleton.getBoneByName('左親指先').position) // 엄지->검지 벡터
+          .subVectors(skeleton.getBoneByName('左小指１').position, skeleton.getBoneByName('左親指１').position) // 엄지->소지 벡터
           .normalize();
-        const SK_v = skeleton.getBoneByName('左中指先').clone().position.normalize(); // 손목->중지 벡터
+        const SK_v = skeleton.getBoneByName('左中指１').clone().position.normalize(); // 손목->중지 벡터
         const SK_w = new THREE.Vector3().crossVectors( // 손바닥의 법선 벡터
           SK_u,
           SK_v
@@ -917,89 +852,89 @@ function onResults2(results) {
           let $chain = $chain_hand.clone();
 
           const Q_thumb1 = computeJointParentQ(
-            '左親指１' , // 엄지
+            '左親指２' , // 엄지
             "LEFT_THUMB_MCP",
             "LEFT_THUMB_CMC",
             $chain,
             skeleton
            );
-           skeleton.getBoneByName("左親指先").quaternion.slerp(Q_thumb1,0.9);
+           skeleton.getBoneByName("左親指１").quaternion.slerp(Q_thumb1,0.9); 
            $chain.multiply(Q_thumb1);
 
            const Q_thumb2 = computeJointParentQ(
-            '左親指２' , // 엄지
+            '左親指先' , // 엄지
             "LEFT_THUMB_IP",
             "LEFT_THUMB_MCP",
             $chain,
             skeleton
            );
-           skeleton.getBoneByName("左親指１").quaternion.slerp(Q_thumb2,0.9);
+           skeleton.getBoneByName("左親指２").quaternion.slerp(Q_thumb2,0.9);
 
         }
         { // 왼손 검지
           let $chain = $chain_hand.clone();
 
           const Q_index1 = computeJointParentQ(
-            '左人指１' , // 검지
+            '左人指２' , // 검지
             "LEFT_INDEX_FINGER_PIP",
             "LEFT_INDEX_FINGER_MCP",
             $chain,
             skeleton
            );
-           skeleton.getBoneByName("左人差指先").quaternion.slerp(Q_index1,0.9);
+           skeleton.getBoneByName("左人指１").quaternion.slerp(Q_index1,0.9); // 左人差指先
            $chain.multiply(Q_index1);
 
            const Q_index2 = computeJointParentQ(
-            '左人指２' , // 검지
+            '左人指３' , // 검지
             "LEFT_INDEX_FINGER_DIP",
             "LEFT_INDEX_FINGER_PIP",
             $chain,
             skeleton
            );
-           skeleton.getBoneByName("左人指１").quaternion.slerp(Q_index2,0.9);
+           skeleton.getBoneByName("左人指２").quaternion.slerp(Q_index2,0.9);
            $chain.multiply(Q_index2);
 
            const Q_index3 = computeJointParentQ(
-            '左人指３' , // 검지
+            '左人差指先' , // 검지
             "LEFT_INDEX_FINGER_TIP",
             "LEFT_INDEX_FINGER_DIP",
             $chain,
             skeleton
            );
-           skeleton.getBoneByName("左人指２").quaternion.slerp(Q_index3,0.9);
+           skeleton.getBoneByName("左人指３").quaternion.slerp(Q_index3,0.9);
 
         }
         { // 왼손 중지
           let $chain = $chain_hand.clone();
 
           const Q_MIDDLE1 = computeJointParentQ(
-            '左中指１' , // 중지
+            '左中指２' , // 중지
             "LEFT_MIDDLE_FINGER_PIP",
             "LEFT_MIDDLE_FINGER_MCP",
             $chain,
             skeleton
            );
-           skeleton.getBoneByName("左中指先").quaternion.slerp(Q_MIDDLE1,0.9);
+           skeleton.getBoneByName("左中指１").quaternion.slerp(Q_MIDDLE1,0.9); // 左中指先
            $chain.multiply(Q_MIDDLE1);
 
            const Q_MIDDLE2 = computeJointParentQ(
-            '左中指２' , // 중지
+            '左中指３' , // 중지
             "LEFT_MIDDLE_FINGER_DIP",
             "LEFT_MIDDLE_FINGER_PIP",
             $chain,
             skeleton
            );
-           skeleton.getBoneByName("左中指１").quaternion.slerp(Q_MIDDLE2,0.9);
+           skeleton.getBoneByName("左中指２").quaternion.slerp(Q_MIDDLE2,0.9);
            $chain.multiply(Q_MIDDLE2);
 
            const Q_MIDDLE3 = computeJointParentQ(
-            '左中指３' , // 중지
+            '左中指先' , // 중지
             "LEFT_MIDDLE_FINGER_TIP",
             "LEFT_MIDDLE_FINGER_DIP",
             $chain,
             skeleton
            );
-           skeleton.getBoneByName("左中指２").quaternion.slerp(Q_MIDDLE3,0.9);
+           skeleton.getBoneByName("左中指３").quaternion.slerp(Q_MIDDLE3,0.9);
            $chain.multiply(Q_MIDDLE3);
         }
 
@@ -1007,65 +942,65 @@ function onResults2(results) {
           let $chain = $chain_hand.clone();
 
           const Q_RING1 = computeJointParentQ(
-            '左薬指１' , // 약지
+            '左薬指２' , // 약지
             "LEFT_RING_FINGER_PIP",
             "LEFT_RING_FINGER_MCP",
             $chain,
             skeleton
            );
-           skeleton.getBoneByName("左薬指先").quaternion.slerp(Q_RING1,0.9);
+           skeleton.getBoneByName("左薬指１").quaternion.slerp(Q_RING1,0.9); //左薬指先
            $chain.multiply(Q_RING1);
 
            const Q_RING2 = computeJointParentQ(
-            '左薬指２' , // 약지
+            '左薬指３' , // 약지
             "LEFT_RING_FINGER_DIP",
             "LEFT_RING_FINGER_PIP",
             $chain,
             skeleton
            );
-           skeleton.getBoneByName("左薬指１").quaternion.slerp(Q_RING2,0.9);
+           skeleton.getBoneByName("左薬指２").quaternion.slerp(Q_RING2,0.9);
            $chain.multiply(Q_RING2);
 
            const Q_RING3 = computeJointParentQ(
-            '左薬指３' , // 약지
+            '左薬指先' , // 약지
             "LEFT_RING_FINGER_TIP",
             "LEFT_RING_FINGER_DIP",
             $chain,
             skeleton
            );
-           skeleton.getBoneByName("左薬指２").quaternion.slerp(Q_RING3,0.9);
+           skeleton.getBoneByName("左薬指３").quaternion.slerp(Q_RING3,0.9);
         }
         { // 왼손 소지
           let $chain = $chain_hand.clone();
 
           const Q_PINKY1 = computeJointParentQ(
-            '左小指１' , // 소지
+            '左小指２' , // 소지
             "LEFT_PINKY_PIP",
             "LEFT_PINKY_MCP",
             $chain,
             skeleton
            );
-           skeleton.getBoneByName("左小指先").quaternion.slerp(Q_PINKY1,0.9);
+           skeleton.getBoneByName("左小指１").quaternion.slerp(Q_PINKY1,0.9);
            $chain.multiply(Q_PINKY1);
 
            const Q_PINKY2 = computeJointParentQ(
-            '左小指２' , // 소지
+            '左小指３' , // 소지
             "LEFT_PINKY_DIP",
             "LEFT_PINKY_PIP",
             $chain,
             skeleton
            );
-           skeleton.getBoneByName("左小指１").quaternion.slerp(Q_PINKY2,0.9);
+           skeleton.getBoneByName("左小指２").quaternion.slerp(Q_PINKY2,0.9);
            $chain.multiply(Q_PINKY2);
 
            const Q_PINKY3 = computeJointParentQ(
-            '左小指３' , // 소지
+            '左小指先' , // 소지
             "LEFT_PINKY_TIP",
             "LEFT_PINKY_DIP",
             $chain,
             skeleton
            );
-           skeleton.getBoneByName("左小指２").quaternion.slerp(Q_PINKY3,0.9);
+           skeleton.getBoneByName("左小指３").quaternion.slerp(Q_PINKY3,0.9);
         }
       }
     }
@@ -1132,9 +1067,9 @@ function onResults2(results) {
         let R_chain = new THREE.Matrix4().makeRotationFromQuaternion($chain);
 
         const SK_u = new THREE.Vector3()
-          .subVectors(skeleton.getBoneByName('右小指先').position, skeleton.getBoneByName('右親指先').position) // 엄지->검지 벡터
+          .subVectors(skeleton.getBoneByName('右小指１').position, skeleton.getBoneByName('右親指１').position) // 엄지->소지 벡터
           .normalize();
-        const SK_v = skeleton.getBoneByName('右中指先').clone().position.normalize(); // 손목->중지 벡터
+        const SK_v = skeleton.getBoneByName('右中指１').clone().position.normalize(); // 손목->중지 벡터
         const SK_w = new THREE.Vector3().crossVectors( // 손바닥의 법선 벡터
           SK_u,
           SK_v
@@ -1162,89 +1097,89 @@ function onResults2(results) {
           let $chain = $chain_hand.clone();
 
           const Q_thumb1 = computeJointParentQ(
-            '右親指１' , // 엄지
+            '右親指２' , // 엄지
             "RIGHT_THUMB_MCP",
             "RIGHT_THUMB_CMC",
             $chain,
             skeleton
            );
-           skeleton.getBoneByName("右親指先").quaternion.slerp(Q_thumb1,0.9);
+           skeleton.getBoneByName("右親指１").quaternion.slerp(Q_thumb1,0.9);//右親指先
            $chain.multiply(Q_thumb1);
 
            const Q_thumb2 = computeJointParentQ(
-            '右親指２' , // 엄지
+            '右親指先' , // 엄지
             "RIGHT_THUMB_IP",
             "RIGHT_THUMB_MCP",
             $chain,
             skeleton
            );
-           skeleton.getBoneByName("右親指１").quaternion.slerp(Q_thumb2,0.9);
+           skeleton.getBoneByName("右親指２").quaternion.slerp(Q_thumb2,0.9);
 
         }
         { // 오른손 검지
           let $chain = $chain_hand.clone();
 
           const Q_index1 = computeJointParentQ(
-            '右人指１' , // 검지
+            '右人指２' , // 검지
             "RIGHT_INDEX_FINGER_PIP",
             "RIGHT_INDEX_FINGER_MCP",
             $chain,
             skeleton
            );
-           skeleton.getBoneByName("右人差指先").quaternion.slerp(Q_index1,0.9);
+           skeleton.getBoneByName("右人指１").quaternion.slerp(Q_index1,0.9);//右人差指先
            $chain.multiply(Q_index1);
 
            const Q_index2 = computeJointParentQ(
-            '右人指２' , // 검지
+            '右人指３' , // 검지
             "RIGHT_INDEX_FINGER_DIP",
             "RIGHT_INDEX_FINGER_PIP",
             $chain,
             skeleton
            );
-           skeleton.getBoneByName("右人指１").quaternion.slerp(Q_index2,0.9);
+           skeleton.getBoneByName("右人指２").quaternion.slerp(Q_index2,0.9);
            $chain.multiply(Q_index2);
 
            const Q_index3 = computeJointParentQ(
-            '右人指３' , // 검지
+            '右人差指先' , // 검지
             "RIGHT_INDEX_FINGER_TIP",
             "RIGHT_INDEX_FINGER_DIP",
             $chain,
             skeleton
            );
-           skeleton.getBoneByName("右人指２").quaternion.slerp(Q_index3,0.9);
+           skeleton.getBoneByName("右人指３").quaternion.slerp(Q_index3,0.9);
 
         }
         { // 오른손 중지
           let $chain = $chain_hand.clone();
 
           const Q_MIDDLE1 = computeJointParentQ(
-            '右中指１' , // 중지
+            '右中指２' , // 중지
             "RIGHT_MIDDLE_FINGER_PIP",
             "RIGHT_MIDDLE_FINGER_MCP",
             $chain,
             skeleton
            );
-           skeleton.getBoneByName("右中指先").quaternion.slerp(Q_MIDDLE1,0.9);
+           skeleton.getBoneByName("右中指１").quaternion.slerp(Q_MIDDLE1,0.9);//右中指先
            $chain.multiply(Q_MIDDLE1);
 
            const Q_MIDDLE2 = computeJointParentQ(
-            '右中指２' , // 중지
+            '右中指３' , // 중지
             "RIGHT_MIDDLE_FINGER_DIP",
             "RIGHT_MIDDLE_FINGER_PIP",
             $chain,
             skeleton
            );
-           skeleton.getBoneByName("右中指１").quaternion.slerp(Q_MIDDLE2,0.9);
+           skeleton.getBoneByName("右中指２").quaternion.slerp(Q_MIDDLE2,0.9);
            $chain.multiply(Q_MIDDLE2);
 
            const Q_MIDDLE3 = computeJointParentQ(
-            '右中指３' , // 중지
+            '右中指先' , // 중지
             "RIGHT_MIDDLE_FINGER_TIP",
             "RIGHT_MIDDLE_FINGER_DIP",
             $chain,
             skeleton
            );
-           skeleton.getBoneByName("右中指２").quaternion.slerp(Q_MIDDLE3,0.9);
+           skeleton.getBoneByName("右中指３").quaternion.slerp(Q_MIDDLE3,0.9);
            $chain.multiply(Q_MIDDLE3);
         }
 
@@ -1252,65 +1187,65 @@ function onResults2(results) {
           let $chain = $chain_hand.clone();
 
           const Q_RING1 = computeJointParentQ(
-            '右薬指１' , // 약지
+            '右薬指２' , // 약지
             "RIGHT_RING_FINGER_PIP",
             "RIGHT_RING_FINGER_MCP",
             $chain,
             skeleton
            );
-           skeleton.getBoneByName("右薬指先").quaternion.slerp(Q_RING1,0.9);
+           skeleton.getBoneByName("右薬指１").quaternion.slerp(Q_RING1,0.9);//右薬指先
            $chain.multiply(Q_RING1);
 
            const Q_RING2 = computeJointParentQ(
-            '右薬指２' , // 약지
+            '右薬指３' , // 약지
             "RIGHT_RING_FINGER_DIP",
             "RIGHT_RING_FINGER_PIP",
             $chain,
             skeleton
            );
-           skeleton.getBoneByName("右薬指１").quaternion.slerp(Q_RING2,0.9);
+           skeleton.getBoneByName("右薬指２").quaternion.slerp(Q_RING2,0.9);
            $chain.multiply(Q_RING2);
 
            const Q_RING3 = computeJointParentQ(
-            '右薬指３' , // 약지
+            '右薬指先' , // 약지
             "RIGHT_RING_FINGER_TIP",
             "RIGHT_RING_FINGER_DIP",
             $chain,
             skeleton
            );
-           skeleton.getBoneByName("右薬指２").quaternion.slerp(Q_RING3,0.9);
+           skeleton.getBoneByName("右薬指３").quaternion.slerp(Q_RING3,0.9);
         }
         { // 오른손 소지
           let $chain = $chain_hand.clone();
 
           const Q_PINKY1 = computeJointParentQ(
-            '右小指１' , // 소지
+            '右小指２' , // 소지
             "RIGHT_PINKY_PIP",
             "RIGHT_PINKY_MCP",
             $chain,
             skeleton
            );
-           skeleton.getBoneByName("右小指先").quaternion.slerp(Q_PINKY1,0.9);
+           skeleton.getBoneByName("右小指１").quaternion.slerp(Q_PINKY1,0.9);//右小指先
            $chain.multiply(Q_PINKY1);
 
            const Q_PINKY2 = computeJointParentQ(
-            '右小指２' , // 소지
+            '右小指３' , // 소지
             "RIGHT_PINKY_DIP",
             "RIGHT_PINKY_PIP",
             $chain,
             skeleton
            );
-           skeleton.getBoneByName("右小指１").quaternion.slerp(Q_PINKY2,0.9);
+           skeleton.getBoneByName("右小指２").quaternion.slerp(Q_PINKY2,0.9);
            $chain.multiply(Q_PINKY2);
 
            const Q_PINKY3 = computeJointParentQ(
-            '右小指３' , // 소지
+            '右小指先' , // 소지
             "RIGHT_PINKY_TIP",
             "RIGHT_PINKY_DIP",
             $chain,
             skeleton
            );
-           skeleton.getBoneByName("右小指２").quaternion.slerp(Q_PINKY3,0.9);
+           skeleton.getBoneByName("右小指３").quaternion.slerp(Q_PINKY3,0.9);
         }
       }
     }
@@ -1396,16 +1331,13 @@ function onResults2(results) {
   
   }
 
-  //ikSolver_left?.update();
-  //ikSolver_right?.update();
-  //ikSolver_left_foot?.update();
-  //ikSolver_right_foot?.update();
-  const hip_right_toe = skeleton.getBoneByName("右足首"); //오른발목
-  
-  cannon_tick(hip_right_toe);
-
-  //const delta = clock.getDelta();
-  //physics.update(delta);
+  ikSolver_left?.update(); // ik 네가지 업데이트
+  ikSolver_right?.update();
+  ikSolver_left_foot?.update();
+  ikSolver_right_foot?.update();
+  const hip_root = skeleton.getBoneByName("センター");
+  helper.update(clock.getDelta());
+  cannon_tick(hip_root); // 엉덩이에 physics 적용
   renderer.render(scene, camera_ar);
   canvasCtx.restore();
 }
@@ -1435,7 +1367,7 @@ async function detectionFrame() {
   videoElement.requestVideoFrameCallback(detectionFrame);
 }
 
-//detectionFrame();
+detectionFrame();
 
 const camera = new Camera(videoElement, {
   onFrame: async () => {
@@ -1445,4 +1377,4 @@ const camera = new Camera(videoElement, {
   height: 720,
 });
 
-camera.start();
+//camera.start();
